@@ -3,6 +3,7 @@
  *  Copyright 2014 Kai Uwe Broulik <kde@privat.broulik.de>
  *  Copyright 2022 Kyle Paulsen <kyle.a.paulsen@gmail.com>
  *  Copyright 2022 Link Dupont <link@sub-pop.net>
+ *  Copyright 2024 Abubakar Yagoub <plasma@blacksuan19.dev>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,11 +20,11 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  2.010-1301, USA.
  */
 
-import QtQuick 2.5
-import QtQuick.Controls 2.12
-import QtQuick.Layouts 1.0
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 import org.kde.kquickcontrols 2.0 as KQuickControls
-import org.kde.kirigami 2.5 as Kirigami
+import org.kde.kirigami as Kirigami
 
 ColumnLayout {
     id: root

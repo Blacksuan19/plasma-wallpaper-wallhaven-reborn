@@ -3,18 +3,21 @@
     SPDX-FileCopyrightText: 2014 Sebastian Kügler <sebas@kde.org>
     SPDX-FileCopyrightText: 2014 Kai Uwe Broulik <kde@privat.broulik.de>
     SPDX-FileCopyrightText: 2022 Link Dupont <link@sub-pop.net>
+    SPDX-FileCopyrightText: 2024 Abubakar Yagoub <plasma@blacksuan19.dev>
 
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-import QtQuick 2.5
-import QtQuick.Controls 2.1 as QQC2
-import QtQuick.Window 2.2
-import org.kde.plasma.wallpapers.image 2.0 as Wallpaper
-import org.kde.plasma.core 2.0 as PlasmaCore
+import QtQuick
+import QtQuick.Controls as QQC2
+import QtQuick.Window 
+import org.kde.plasma.wallpapers.image as Wallpaper
+import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasmoid
 
-QQC2.StackView {
-    id: root
+WallpaperItem {
+    id: root 
+    anchors.fill: parent 
 
     property url currentUrl
     property int currentPage
@@ -239,22 +242,22 @@ QQC2.StackView {
         pendingImage = null;
     }
 
-    replaceEnter: Transition {
-        OpacityAnimator {
-            id: replaceEnterOpacityAnimator
-            from: 0
-            to: 1
-            // The value is to keep compatible with the old feeling defined by "TransitionAnimationDuration" (default: 1000)
-            // 1 is HACK for https://bugreports.qt.io/browse/QTBUG-106797 to avoid flickering
-            duration: root.doesSkipAnimation ? 1 : Math.round(PlasmaCore.Units.veryLongDuration * 2.5)
-        }
-    }
+    // replaceEnter: Transition {
+    //     OpacityAnimator {
+    //         id: replaceEnterOpacityAnimator
+    //         from: 0
+    //         to: 1
+    //         // The value is to keep compatible with the old feeling defined by "TransitionAnimationDuration" (default: 1000)
+    //         // 1 is HACK for https://bugreports.qt.io/browse/QTBUG-106797 to avoid flickering
+    //         duration: root.doesSkipAnimation ? 1 : Math.round(PlasmaCore.Units.veryLongDuration * 2.5)
+    //     }
+    // }
     // Keep the old image around till the new one is fully faded in
     // If we fade both at the same time you can see the background behind glimpse through
-    replaceExit: Transition{
-        PauseAnimation {
-            duration: replaceEnterOpacityAnimator.duration
-        }
-    }
+    // replaceExit: Transition{
+    //     PauseAnimation {
+    //         duration: replaceEnterOpacityAnimator.duration
+    //     }
+    // }
 
 }
