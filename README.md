@@ -2,30 +2,27 @@
 
 Port of wallhaven wallpaper plugin by [subpop](https://github.com/subpop/wallhaven-wallpaper-plasma) for plasma 6.
 
+![screenshot.png](screenshot.png)
+
 ## Features
 
 ### original features
 
-- automatically change wallpaper at a set interval
-- Search for wallpapers by keyword
-- Filter by categories
-- Filter by Purity
-- Sort by Relevance, Random, Date Added, Views, Favorites, Toplist
-- Set wallpaper to fill, fit, stretch, center, tile, or scale
-- Use own API key (only required for accessing NSFW wallpapers)
+- automatically change wallpaper at a set interval.
+- Search for wallpapers by keyword.
+- Filter by categories.
+- Filter by Purity.
+- Sort by Relevance, Random, Date Added, Views, Favorites, Toplist.
+- Set wallpaper to fill, fit, stretch, center, tile, or scale.
+- Use own API key (only required for accessing NSFW wallpapers).
 
 ### New features
 
-- Ported to plasma 6
-- add right click context menu action to open wallpaper in browser
-- add right click context menu action to fetch new wallpaper
-
-## Current status
-
-All features work as they did in the original plugin. that also includes the same bugs:
-
-- you need to manually refresh the wallpaper after changing the settings
-- after installation, you need to restart plasmashell for the plugin to work properly.
+- Ported to plasma 6.
+- add right click context menu action to open wallpaper in browser.
+- add right click context menu action to fetch new wallpaper.
+- streamline the settings page.
+- automatically refresh the wallpaper after changing settings.
 
 ## Installation
 
@@ -37,8 +34,13 @@ cd plasma-wallpaper-wallhaven-reborn
 kpackagetool6 --type Plasma/Wallpaper --install package/
 ```
 
-- set the plugin as your wallpaper in the wallpaper settings
-- restart plasmashell
-- refresh the wallpaper
+additional setup might be required to get the plugin to work, as below:
 
-![screenshot.png](screenshot.png)
+- set the plugin as your wallpaper in the wallpaper settings.
+- close the settings window.
+- open the settings window again, new wallpaper should be fetched.
+
+if after the above steps the wallpaper is still not fetched or applied, you can try the following:
+
+- restart plasmashell with `killall plasmashell && kstart5 plasmashell`.
+- refresh the wallpaper from context menu or settings page.
