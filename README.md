@@ -2,6 +2,23 @@
 
 Port of wallhaven wallpaper plugin by [subpop](https://github.com/subpop/wallhaven-wallpaper-plasma) for plasma 6.
 
+## Features
+
+### original features
+
+- automatically change wallpaper at a set interval
+- Search for wallpapers by keyword
+- Filter by categories
+- Filter by Purity
+- Sort by Relevance, Random, Date Added, Views, Favorites, Toplist
+- Set wallpaper to fill, fit, stretch, center, tile, or scale
+- Use own API key (only required for accessing NSFW wallpapers)
+
+### New features
+
+- Ported to plasma 6
+- add right click context menu action to open wallpaper in browser
+
 ## Current status
 
 All features work as they did in the original plugin. that also includes the same bugs:
