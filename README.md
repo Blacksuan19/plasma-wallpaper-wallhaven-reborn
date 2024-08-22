@@ -24,6 +24,7 @@ Port of wallhaven wallpaper plugin by [subpop](https://github.com/subpop/wallhav
 All features work as they did in the original plugin. that also includes the same bugs:
 
 - you need to manually refresh the wallpaper after changing the settings
+- after installation, you need to restart plasmashell for the plugin to work properly.
 
 ## Installation
 
@@ -34,5 +35,9 @@ git clone https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn.git
 cd plasma-wallpaper-wallhaven-reborn
 kpackagetool6 --type Plasma/Wallpaper --install package/
 ```
+
+- set the plugin as your wallpaper in the wallpaper settings
+- restart plasmashell
+- refresh the wallpaper
 
 ![screenshot.png](screenshot.png)
