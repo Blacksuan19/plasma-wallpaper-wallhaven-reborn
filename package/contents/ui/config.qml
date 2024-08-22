@@ -57,19 +57,12 @@ Kirigami.FormLayout {
     Image {
         id: currentWallpaper
 
+        Kirigami.FormData.label: i18n("Current Wallpaper:")
+        height: 200
+        width: 200
         source: wallpaperConfiguration.currentWallpaperThumbnail
         visible: wallpaperConfiguration.currentWallpaperThumbnail != ""
         Layout.topMargin: 10
-        Layout.alignment: Qt.AlignCenter
-    }
-
-    Label {
-        id: currentWallpaperLabel
-
-        text: `<html><a href="${wallpaperConfiguration.currentWallpaperUrl}">${wallpaperConfiguration.currentWallpaperUrl || ""}</a></html>`
-        onLinkActivated: function(url) {
-            Qt.openUrlExternally(url);
-        }
         Layout.alignment: Qt.AlignCenter
     }
 
@@ -145,9 +138,14 @@ Kirigami.FormLayout {
         id: apiKeyInput
 
         text: cfg_APIKey
+        placeholderText: i18n("Optional API Key to access NSFW content")
         Kirigami.FormData.label: i18n("API Key:")
-        onTextChanged: {
-            cfg_APIKey = text;
+        leftPadding: 12
+        onTextChanged: cfg_APIKey = text
+        onActiveFocusChanged: {
+            if (!activeFocus)
+                wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+
         }
     }
 
@@ -155,9 +153,14 @@ Kirigami.FormLayout {
         id: queryInput
 
         text: cfg_Query
+        placeholderText: i18n("search terms separated by spaces")
         Kirigami.FormData.label: i18n("Query:")
-        onTextChanged: {
-            cfg_Query = text;
+        leftPadding: 12
+        onTextChanged: cfg_Query = text
+        onActiveFocusChanged: {
+            if (!activeFocus)
+                wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+
         }
     }
 
@@ -165,6 +168,11 @@ Kirigami.FormLayout {
         id: categoryInput
 
         Kirigami.FormData.label: i18n("Categories:")
+        onActiveFocusChanged: {
+            if (!activeFocus)
+                wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+
+        }
 
         RowLayout {
             anchors.fill: parent
@@ -201,6 +209,11 @@ Kirigami.FormLayout {
         id: purityInput
 
         Kirigami.FormData.label: i18n("Purity:")
+        onActiveFocusChanged: {
+            if (!activeFocus)
+                wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+
+        }
 
         RowLayout {
             anchors.fill: parent
@@ -295,18 +308,9 @@ Kirigami.FormLayout {
         onActivated: cfg_TopRange = currentValue
     }
 
-    KQuickControls.ColorButton {
-        id: searchColorButton
-
-        visible: false
-        Kirigami.FormData.label: i18n("Search Color:")
-        dialogTitle: i18nd("plasma_wallpaper_org.kde.image", "Select Search Color")
-        onColorChanged: cfg_SearchColor = color
-        Component.onCompleted: color = cfg_SearchColor
-    }
-
     RowLayout {
         Kirigami.FormData.label: i18n("Change every:")
+        Layout.bottomMargin: 10
 
         SpinBox {
             id: delaySpinBox
@@ -318,7 +322,7 @@ Kirigami.FormLayout {
             to: 50000
             editable: true
             textFromValue: function(value, locale) {
-                return value + " minutes";
+                return " " + value + " minutes";
             }
             valueFromText: function(text, locale) {
                 return text.replace(/ minutes/, '');
@@ -328,8 +332,9 @@ Kirigami.FormLayout {
         Button {
             icon.name: "view-refresh"
             ToolTip.text: "Refresh Wallpaper"
-            ToolTip.visible: top
+            ToolTip.visible: hovered
             onClicked: {
+                focus = false;
                 wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
             }
         }

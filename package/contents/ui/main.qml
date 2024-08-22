@@ -191,7 +191,7 @@ WallpaperItem {
             onTriggered: Qt.openUrlExternally(main.currentUrl)
         },
         PlasmaCore.Action {
-            text: i18n("Fetch New Wallpaper")
+            text: i18n("Refresh Wallpaper")
             icon.name: "view-refresh"
             onTriggered: Qt.callLater(refreshImage)
         }
