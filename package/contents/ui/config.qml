@@ -143,7 +143,7 @@ Kirigami.FormLayout {
         leftPadding: 12
         onTextChanged: cfg_APIKey = text
         onActiveFocusChanged: {
-            if (!activeFocus)
+            if (!activeFocus && text !== cfg_APIKey)
                 wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
 
         }
@@ -158,7 +158,7 @@ Kirigami.FormLayout {
         leftPadding: 12
         onTextChanged: cfg_Query = text
         onActiveFocusChanged: {
-            if (!activeFocus)
+            if (!activeFocus && text !== cfg_Query)
                 wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
 
         }
