@@ -26,6 +26,17 @@ Port of wallhaven wallpaper plugin by [subpop](https://github.com/subpop/wallhav
 
 ## Installation
 
+### KDE Store
+
+Install the plugin from the KDE Store Plasma 6 version
+
+- Right click on the Desktop > Configure Desktop and Wallpaper... > Get New Plugins
+- Search for "Wallhaven Wallpaper Reborn", install and set it as your wallpaper.
+- To set as Lock Screen wallpaper go to System settings > Screen Locking > Appearance: Configure...
+
+
+### From source
+
 installation requires `kpackagetool6` which can be found on the `kpackage` package on arch based distros, `kpackagetool6` on Suse based distros, and `kf6-kpackage` on debian based distros.
 
 ```bash
