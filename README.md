@@ -1,15 +1,19 @@
 # Wallhaven Wallpaper Reborn
 
-Port of wallhaven wallpaper plugin for plasma 5 by [subpop](https://github.com/subpop/wallhaven-wallpaper-plasma).
+Port of wallhaven wallpaper plugin by [subpop](https://github.com/subpop/wallhaven-wallpaper-plasma) for plasma 6.
 
 ## Current status
 
-Currently, the plugin is broken for the most part except:
+All features work as they did in the original plugin. that also includes the same bugs:
 
-- compile and install on plasma 6
-- fetching wallpaper from wallhaven api
-- set initial fetched image as wallpaper
+- you need to manually refresh the wallpaper after changing the settings
 
-there are some issues with config.qml not being able to access config variables in main.xml, which breaks most of the functionality, `config.qml` needs to be rewritten.
+## Installation
+
+```bash
+git clone https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn.git
+cd plasma-wallpaper-wallhaven-reborn
+bash install.sh
+```
 
 ![screenshot.png](screenshot.png)
