@@ -18,6 +18,7 @@ Port of wallhaven wallpaper plugin by [subpop](https://github.com/subpop/wallhav
 
 - Ported to plasma 6
 - add right click context menu action to open wallpaper in browser
+- add right click context menu action to fetch new wallpaper
 
 ## Current status
 

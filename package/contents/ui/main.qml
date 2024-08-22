@@ -186,9 +186,14 @@ WallpaperItem {
     Component.onCompleted: refreshImage()
     contextualActions: [
         PlasmaCore.Action {
-            text: i18nd("plasma_wallpaper_org.kde.potd", "Open Wallpaper URL")
+            text: i18n("Open Wallpaper URL")
             icon.name: "external-link-symbolic"
             onTriggered: Qt.openUrlExternally(main.currentUrl)
+        },
+        PlasmaCore.Action {
+            text: i18n("Fetch New Wallpaper")
+            icon.name: "view-refresh"
+            onTriggered: Qt.callLater(refreshImage)
         }
     ]
 
