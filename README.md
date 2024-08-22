@@ -27,10 +27,12 @@ All features work as they did in the original plugin. that also includes the sam
 
 ## Installation
 
+installation requires `kpackagetool6` which can be found on the `kpackage` package on arch based distros, `kpackagetool6` on Suse based distros, and `kf6-kpackage` on debian based distros.
+
 ```bash
 git clone https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn.git
 cd plasma-wallpaper-wallhaven-reborn
-bash install.sh
+kpackagetool6 --type Plasma/Wallpaper --install package/
 ```
 
 ![screenshot.png](screenshot.png)
