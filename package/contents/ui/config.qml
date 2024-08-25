@@ -27,8 +27,6 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.kquickcontrols 2.0 as KQuickControls
-import org.kde.plasma.extras as PlasmaExtras
-import org.kde.plasma.plasmoid
 
 Kirigami.FormLayout {
     id: root
