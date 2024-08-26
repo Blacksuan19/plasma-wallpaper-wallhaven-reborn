@@ -24,6 +24,12 @@ Port of wallhaven wallpaper plugin by [subpop](https://github.com/subpop/wallhav
 - streamline the settings page.
 - automatically refresh the wallpaper after changing settings.
 
+### Current issues
+
+- the plugin cannot be set as lock screen wallpaper. ([networking related](https://bugs.kde.org/show_bug.cgi?id=483094))
+- system settings crashes after setting the plugin as wallpaper and clicking apply.
+- current wallpaper is not shown in the plugin settings page the first time the plugin is set as wallpaper.
+
 ## Installation
 
 ### KDE Store
