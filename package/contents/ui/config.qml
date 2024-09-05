@@ -146,7 +146,7 @@ Kirigami.FormLayout {
     }
 
     RowLayout {
-        id: QueryRow
+        id: queryRow
 
         width: parent.width
         Layout.fillWidth: true
