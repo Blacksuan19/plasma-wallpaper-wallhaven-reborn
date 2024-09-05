@@ -149,7 +149,9 @@ Kirigami.FormLayout {
         id: queryInput
 
         text: cfg_Query
-        placeholderText: i18n("search terms separated by spaces")
+        placeholderText: i18n("search terms separated by comma")
+        ToolTip.text: "Search terms separated by comma"
+        ToolTip.visible: queryInput.activeFocus
         Kirigami.FormData.label: i18n("Query:")
         leftPadding: 12
         onTextChanged: cfg_Query = text
