@@ -16,11 +16,14 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.plasmoid
 
 WallpaperItem {
+    // rankings
+
     id: main
 
     property url currentUrl
     property int currentPage: 1
     property int currentIndex
+    property int currentSearchTermIndex: -1
     readonly property int fillMode: main.configuration.FillMode
     readonly property bool blur: main.configuration.Blur
     readonly property bool refreshSignal: main.configuration.RefetchSignal
@@ -48,6 +51,7 @@ WallpaperItem {
     function getImageData() {
         return new Promise((res, rej) => {
             var url = `https://wallhaven.cc/api/v1/search?`;
+            // categories
             var categories = "";
             if (main.configuration.CategoryGeneral)
                 categories += "1";
@@ -61,6 +65,7 @@ WallpaperItem {
                 categories += "1";
             else
                 categories += "0";
+            // purity
             url += `categories=${categories}&`;
             var purity = "";
             if (main.configuration.PuritySFW)
@@ -76,16 +81,30 @@ WallpaperItem {
             else
                 purity += "0";
             url += `purity=${purity}&`;
+            // sorting
             url += `sorting=${main.configuration.Sorting}&`;
             if (main.configuration.Sorting != "random")
                 url += `page=${main.currentPage}&`;
 
-            url += `atleast=${main.sourceSize.width}x${main.sourceSize.height}&`;
             if (main.configuration.Sorting == "toplist")
                 url += `topRange=${main.configuration.TopRange}&`;
 
+            // dimensions
+            url += `atleast=${main.sourceSize.width}x${main.sourceSize.height}&`;
             url += `ratios=${encodeURIComponent(main.aspectRatio)}&`;
-            url += `q=${encodeURIComponent(main.configuration.Query)}`;
+            /// query
+            var user_q = main.configuration.Query;
+            let qs = user_q.split(",");
+            // select a random query from the array
+            let term_index = Math.floor(Math.random() * qs.length);
+            // avoid repeating the same query
+            if (term_index == main.currentSearchTermIndex)
+                term_index = (term_index + 1) % qs.length;
+
+            main.currentSearchTermIndex = term_index;
+            let final_q = qs[term_index];
+            console.log("transformed query: " + final_q);
+            url += `q=${encodeURIComponent(final_q)}`;
             console.error('using url: ' + url);
             const xhr = new XMLHttpRequest();
             xhr.onload = () => {
