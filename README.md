@@ -22,7 +22,20 @@ Port of wallhaven wallpaper plugin by [subpop](https://github.com/subpop/wallhav
 - add right click context menu action to open wallpaper in browser.
 - add right click context menu action to fetch new wallpaper.
 - streamline the settings page.
+- allow using multiple tags as query parameters.
+  - tags should be separated by commas.
+  - one tag is chosen randomly from the list of tags for each wallpaper.
 - automatically refresh the wallpaper after changing settings.
+
+### How to Search
+
+the query field supports all types of queries supported by the wallhaven API, this means other than tags, you can also filter by:
+
+- wallhaven user name: `@username`
+- wallpapers similar to a wallpaper: `id:123456`
+- you can combine the above with tags: `@username,tag1,tag2,id:123456` this will find a wallpaper matching any of the tags, the user, or the id each time you fetch a new wallpaper.
+
+for more information about the wallhaven API, you can check the [official documentation](https://wallhaven.cc/help/api).
 
 ### Current issues
 
