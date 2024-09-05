@@ -25,6 +25,7 @@ Port of wallhaven wallpaper plugin by [subpop](https://github.com/subpop/wallhav
 - allow using multiple tags as query parameters.
   - tags should be separated by commas.
   - one tag is chosen randomly from the list of tags for each wallpaper.
+- add tooltip button to show how to search for wallpapers.
 - automatically refresh the wallpaper after changing settings.
 
 ### How to Search

@@ -145,21 +145,41 @@ Kirigami.FormLayout {
         }
     }
 
-    TextField {
-        id: queryInput
+    RowLayout {
+        id: apiKeyRow
 
-        text: cfg_Query
-        placeholderText: i18n("search terms separated by comma")
-        ToolTip.text: "Search terms separated by comma"
-        ToolTip.visible: queryInput.activeFocus
+        width: parent.width
         Kirigami.FormData.label: i18n("Query:")
-        leftPadding: 12
-        onTextChanged: cfg_Query = text
-        onActiveFocusChanged: {
-            if (!activeFocus && text !== cfg_Query)
-                wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
 
+        TextField {
+            id: queryInput
+
+            Layout.fillWidth: true
+            text: cfg_Query
+            placeholderText: i18n("search terms separated by comma")
+            ToolTip.text: "Search terms separated by comma"
+            ToolTip.visible: queryInput.activeFocus
+            leftPadding: 12
+            onTextChanged: cfg_Query = text
+            onActiveFocusChanged: {
+                if (!activeFocus && text !== cfg_Query)
+                    wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+
+            }
         }
+
+        Button {
+            icon.name: "dialog-information-symbolic"
+            ToolTip.text: i18n("<b>Supported Query Formats:</b><ul><li>tag names: <code>tag1</code></li><li>wallhaven user name: <code>@username</code></li><li>wallpapers similar to a wallpaper with id: <code>id:123456</code></li><li>combination of all: <code>@username,tag1,tag2,id:123456</code></li></ul>this will find a wallpaper matching any of the tags, the user, or the id each time a new wallpaper is fetched.")
+            highlighted: true
+            hoverEnabled: true
+            ToolTip.visible: hovered
+            Kirigami.Theme.inherit: false
+            flat: true
+            Layout.alignment: Qt.AlignRight
+            Layout.fillWidth: false
+        }
+
     }
 
     GroupBox {
