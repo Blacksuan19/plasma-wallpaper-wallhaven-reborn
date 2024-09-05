@@ -146,9 +146,10 @@ Kirigami.FormLayout {
     }
 
     RowLayout {
-        id: apiKeyRow
+        id: QueryRow
 
         width: parent.width
+        Layout.fillWidth: true
         Kirigami.FormData.label: i18n("Query:")
 
         TextField {
