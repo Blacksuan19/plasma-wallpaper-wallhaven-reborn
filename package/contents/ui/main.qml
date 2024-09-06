@@ -16,8 +16,6 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.plasmoid
 
 WallpaperItem {
-    // rankings
-
     id: main
 
     property url currentUrl
@@ -251,8 +249,6 @@ WallpaperItem {
 
                 from: 0
                 to: 1
-                // The value is to keep compatible with the old feeling defined by "TransitionAnimationDuration" (default: 1000)
-                // 1 is HACK for https://bugreports.qt.io/browse/QTBUG-106797 to avoid flickering
                 duration: main.doesSkipAnimation ? 1 : Math.round(Kirigami.Units.veryLongDuration * 2.5)
             }
 
