@@ -12,6 +12,7 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Window
 import org.kde.kirigami 2.20 as Kirigami
+import org.kde.notification 1.0
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.plasmoid
 
@@ -38,6 +39,7 @@ WallpaperItem {
     }
 
     function refreshImage() {
+        refreshNotification.sendEvent();
         getImageData().then(pickImage).catch((e) => {
             console.error("getImageData Error:" + e);
             main.configuration.ErrorText = e;
@@ -209,7 +211,10 @@ WallpaperItem {
         PlasmaCore.Action {
             text: i18n("Refresh Wallpaper")
             icon.name: "view-refresh"
-            onTriggered: Qt.callLater(refreshImage)
+            onTriggered: {
+                refreshNotification.sendEvent();
+                Qt.callLater(refreshImage);
+            }
         }
     ]
 
@@ -221,8 +226,21 @@ WallpaperItem {
         triggeredOnStart: true
         onTriggered: {
             console.log("refreshTimer triggered");
+            refreshNotification.sendEvent();
             refreshImage();
         }
+    }
+
+    Notification {
+        id: refreshNotification
+
+        componentName: "plasma_workspace"
+        eventId: "notification"
+        title: "Wallhaven Wallpaper"
+        text: "Fetching a new wallpaper..."
+        iconName: "kde"
+        urgency: Notification.HighUrgency
+        autoDelete: true
     }
 
     QQC2.StackView {
