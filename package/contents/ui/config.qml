@@ -353,13 +353,4 @@ Kirigami.FormLayout {
 
     }
 
-    Label {
-        id: errorLabel
-
-        Layout.alignment: Qt.AlignLeft
-        text: wallpaperConfiguration.ErrorText
-        color: Kirigami.Theme.negativeTextColor
-        visible: wallpaperConfiguration.ErrorText != ""
-    }
-
 }

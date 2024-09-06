@@ -42,6 +42,9 @@ WallpaperItem {
         refreshNotification.sendEvent();
         getImageData().then(pickImage).catch((e) => {
             console.error("getImageData Error:" + e);
+            var note = failureNotification.createObject(root);
+            note.text = e;
+            note.sendEvent();
             main.configuration.ErrorText = e;
             main.currentUrl = "blackscreen.jpg";
             loadImage();
@@ -241,6 +244,21 @@ WallpaperItem {
         iconName: "kde"
         urgency: Notification.HighUrgency
         autoDelete: true
+    }
+
+    Component {
+        id: failureNotification
+
+        Notification {
+            componentName: "plasma_workspace"
+            eventId: "notification"
+            title: "Wallhaven Wallpaper Error"
+            text: "Failed to fetch a new wallpaper"
+            iconName: "warning"
+            urgency: Notification.HighUrgency
+            autoDelete: true
+        }
+
     }
 
     QQC2.StackView {

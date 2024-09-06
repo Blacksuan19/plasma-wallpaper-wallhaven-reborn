@@ -27,7 +27,7 @@ Port of wallhaven wallpaper plugin by [subpop](https://github.com/subpop/wallhav
   - one tag is chosen randomly from the list of tags for each wallpaper.
 - add tooltip button to show how to search for wallpapers.
 - automatically refresh the wallpaper after changing settings.
-- show notification when fetching new wallpaper.
+- show notification when fetching new wallpaper or when an error occurs.
 
 ### How to Search
 
