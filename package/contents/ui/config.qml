@@ -29,24 +29,28 @@ import org.kde.kquickcontrols 2.0 as KQuickControls
 Kirigami.FormLayout {
     id: root
 
+    property var wallpaperConfiguration: wallpaper.configuration
+    property alias formLayout: root
     property alias cfg_Color: colorButton.color
-    property int cfg_FillMode
     property alias cfg_Blur: blurRadioButton.checked
+    property alias cfg_APIKey: apiKeyInput.text
+    property alias cfg_Query: queryInput.text
+    property int cfg_FillMode
     property int cfg_WallpaperDelay: 60
     property int cfg_WallpaperLimit: 100
-    property var wallpaperConfiguration: wallpaper.configuration
-    property string cfg_APIKey
-    property string cfg_Query
+    property string cfg_Sorting
+    property string cfg_TopRange
+    property string cfg_SearchColor
     property bool cfg_CategoryGeneral
     property bool cfg_CategoryAnime
     property bool cfg_CategoryPeople
     property bool cfg_PuritySFW
     property bool cfg_PuritySketchy
     property bool cfg_PurityNSFW
-    property string cfg_Sorting
-    property string cfg_TopRange
-    property string cfg_SearchColor
-    property alias formLayout: root
+
+    function refreshImage() {
+        wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+    }
 
     twinFormLayouts: parentLayout
 
@@ -133,16 +137,11 @@ Kirigami.FormLayout {
     TextField {
         id: apiKeyInput
 
-        text: cfg_APIKey
+        text: root.cfg_APIKey
         placeholderText: i18n("Optional API Key to access NSFW content")
         Kirigami.FormData.label: i18n("API Key:")
         leftPadding: 12
         onTextChanged: cfg_APIKey = text
-        onActiveFocusChanged: {
-            if (!activeFocus && text !== cfg_APIKey)
-                wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
-
-        }
     }
 
     RowLayout {
@@ -156,17 +155,11 @@ Kirigami.FormLayout {
             id: queryInput
 
             Layout.fillWidth: true
-            text: cfg_Query
-            placeholderText: i18n("search terms separated by comma")
+            text: root.cfg_Query
+            placeholderText: i18n("tag1, tag2, @username, id:123456")
             ToolTip.text: "Search terms separated by comma"
             ToolTip.visible: queryInput.activeFocus
             leftPadding: 12
-            onTextChanged: cfg_Query = text
-            onActiveFocusChanged: {
-                if (!activeFocus && text !== cfg_Query)
-                    wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
-
-            }
         }
 
         Button {
@@ -189,7 +182,7 @@ Kirigami.FormLayout {
         Kirigami.FormData.label: i18n("Categories:")
         onActiveFocusChanged: {
             if (!activeFocus)
-                wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+                refreshImage();
 
         }
 
@@ -230,7 +223,7 @@ Kirigami.FormLayout {
         Kirigami.FormData.label: i18n("Purity:")
         onActiveFocusChanged: {
             if (!activeFocus)
-                wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+                refreshImage();
 
         }
 
@@ -354,7 +347,7 @@ Kirigami.FormLayout {
             ToolTip.visible: hovered
             onClicked: {
                 focus = false;
-                wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+                refreshImage();
             }
         }
 
