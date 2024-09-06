@@ -23,6 +23,7 @@ WallpaperItem {
     property int currentPage: 1
     property int currentIndex
     property int currentSearchTermIndex: -1
+    property string selectedQuery: ""
     readonly property int fillMode: main.configuration.FillMode
     readonly property bool blur: main.configuration.Blur
     readonly property bool refreshSignal: main.configuration.RefetchSignal
@@ -39,8 +40,10 @@ WallpaperItem {
     }
 
     function refreshImage() {
-        refreshNotification.sendEvent();
-        getImageData().then(pickImage).catch((e) => {
+        getImageData().then((data) => {
+            refreshNotification.sendEvent();
+            pickImage(data);
+        }).catch((e) => {
             console.error("getImageData Error:" + e);
             var note = failureNotification.createObject(root);
             note.text = e;
@@ -106,6 +109,7 @@ WallpaperItem {
 
             main.currentSearchTermIndex = term_index;
             let final_q = qs[term_index];
+            main.selectedQuery = final_q;
             console.log("transformed query: " + final_q);
             url += `q=${encodeURIComponent(final_q)}`;
             console.error('using url: ' + url);
@@ -215,8 +219,8 @@ WallpaperItem {
             text: i18n("Refresh Wallpaper")
             icon.name: "view-refresh"
             onTriggered: {
-                refreshNotification.sendEvent();
                 Qt.callLater(refreshImage);
+                refreshNotification.sendEvent();
             }
         }
     ]
@@ -229,8 +233,8 @@ WallpaperItem {
         triggeredOnStart: true
         onTriggered: {
             console.log("refreshTimer triggered");
-            refreshNotification.sendEvent();
             refreshImage();
+            refreshNotification.sendEvent();
         }
     }
 
@@ -240,7 +244,7 @@ WallpaperItem {
         componentName: "plasma_workspace"
         eventId: "notification"
         title: "Wallhaven Wallpaper"
-        text: "Fetching a new wallpaper..."
+        text: "Fetching a new wallpaper with search term " + main.selectedQuery
         iconName: "plugin-wallpaper"
         urgency: Notification.HighUrgency
         autoDelete: true
