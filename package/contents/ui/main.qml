@@ -47,7 +47,6 @@ WallpaperItem {
             var note = failureNotification.createObject(root);
             note.text = e;
             note.sendEvent();
-            main.configuration.ErrorText = e;
             main.currentUrl = "blackscreen.jpg";
             loadImage();
         });
@@ -158,9 +157,9 @@ WallpaperItem {
             main.currentPage = d.meta.current_page;
             main.configuration.currentWallpaperThumbnail = imageObj.thumbs.small;
             main.configuration.currentWallpaperUrl = imageObj.url;
-            main.configuration.ErrorText = "";
         } else {
-            main.configuration.ErrorText = "No wallpapers found";
+            var note = failureNotification.createObject(root);
+            note.sendEvent();
             main.configuration.currentWallpaperThumbnail = "";
             main.configuration.currentWallpaperUrl = "";
             main.currentUrl = "blackscreen.jpg";
@@ -257,7 +256,7 @@ WallpaperItem {
             eventId: "notification"
             title: "Wallhaven Wallpaper Error"
             text: "Failed to fetch a new wallpaper"
-            iconName: "dialog-information"
+            iconName: "dialog-error"
             urgency: Notification.HighUrgency
             autoDelete: true
         }
