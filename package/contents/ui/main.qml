@@ -241,7 +241,7 @@ WallpaperItem {
         eventId: "notification"
         title: "Wallhaven Wallpaper"
         text: "Fetching a new wallpaper..."
-        iconName: "kde"
+        iconName: "plugin-wallpaper"
         urgency: Notification.HighUrgency
         autoDelete: true
     }
@@ -254,7 +254,7 @@ WallpaperItem {
             eventId: "notification"
             title: "Wallhaven Wallpaper Error"
             text: "Failed to fetch a new wallpaper"
-            iconName: "warning"
+            iconName: "dialog-information"
             urgency: Notification.HighUrgency
             autoDelete: true
         }
