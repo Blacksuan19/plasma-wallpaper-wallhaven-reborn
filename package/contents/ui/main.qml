@@ -41,7 +41,6 @@ WallpaperItem {
 
     function refreshImage() {
         getImageData().then((data) => {
-            refreshNotification.sendEvent();
             pickImage(data);
         }).catch((e) => {
             console.error("getImageData Error:" + e);
