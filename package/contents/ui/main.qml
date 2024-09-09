@@ -265,6 +265,7 @@ WallpaperItem {
 
     QQC2.StackView {
         id: root
+        anchors.fill: parent
 
         Component {
             id: mainImage
