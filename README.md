@@ -39,10 +39,11 @@ the query field supports all types of queries supported by the wallhaven API, th
 
 for more information about the wallhaven API, you can check the [official documentation](https://wallhaven.cc/help/api).
 
-### Current issues
+### Current known issues
 
 - the plugin cannot be set as lock screen wallpaper. ([networking related](https://bugs.kde.org/show_bug.cgi?id=483094))
 - wallpaper preview not shown on the settings wallpaper KCM.
+- notification is not shown when fetching new wallpaper if plugin is set as wallpaper from settings wallpaper KCM.
 - current wallpaper is not shown in the plugin settings page the first time the plugin is set as wallpaper.
 
 ## Installation
