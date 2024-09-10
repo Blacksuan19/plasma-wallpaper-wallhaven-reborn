@@ -42,7 +42,7 @@ for more information about the wallhaven API, you can check the [official docume
 ### Current issues
 
 - the plugin cannot be set as lock screen wallpaper. ([networking related](https://bugs.kde.org/show_bug.cgi?id=483094))
-- system settings crashes after setting the plugin as wallpaper and clicking apply.
+- wallpaper preview not shown on the settings wallpaper KCM.
 - current wallpaper is not shown in the plugin settings page the first time the plugin is set as wallpaper.
 
 ## Installation
