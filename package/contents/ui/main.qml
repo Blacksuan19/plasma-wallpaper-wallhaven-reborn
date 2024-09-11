@@ -129,7 +129,7 @@ WallpaperItem {
                     try {
                         data = JSON.parse(xhr.responseText);
                     } catch (e) {
-                        msg = "cannot parse response as JSON: " + xhr.responseText;
+                        let msg = "cannot parse response as JSON: " + xhr.responseText;
                         sendFailureNotification(msg);
                         return rej(msg);
                     }
@@ -138,7 +138,7 @@ WallpaperItem {
             };
             xhr.onerror = () => {
                 if (retries > 0) {
-                    msg = "Request failed, retrying in 5 seconds...";
+                    let msg = "Request failed, retrying in 5 seconds...";
                     console.log(msg);
                     sendFailureNotification(msg);
                     retryTimer.retries = retries;
