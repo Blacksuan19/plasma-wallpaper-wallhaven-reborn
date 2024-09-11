@@ -245,7 +245,7 @@ WallpaperItem {
         text: "Fetching a new wallpaper with search term " + main.selectedQuery
         iconName: "plugin-wallpaper"
         urgency: Notification.HighUrgency
-        autoDelete: true
+        autoDelete: false
     }
 
     Component {
@@ -258,13 +258,14 @@ WallpaperItem {
             text: "Failed to fetch a new wallpaper"
             iconName: "dialog-error"
             urgency: Notification.HighUrgency
-            autoDelete: true
+            autoDelete: false
         }
 
     }
 
     QQC2.StackView {
         id: root
+
         anchors.fill: parent
 
         Component {
