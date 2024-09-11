@@ -23,7 +23,6 @@ WallpaperItem {
     property int currentPage: 1
     property int currentIndex
     property int currentSearchTermIndex: -1
-    property string selectedQuery: ""
     readonly property int fillMode: main.configuration.FillMode
     readonly property bool blur: main.configuration.Blur
     readonly property bool refreshSignal: main.configuration.RefetchSignal
@@ -105,8 +104,8 @@ WallpaperItem {
 
             main.currentSearchTermIndex = term_index;
             let final_q = qs[term_index];
-            main.selectedQuery = final_q;
             console.log("transformed query: " + final_q);
+            sendRefreshNotification(final_q);
             url += `q=${encodeURIComponent(final_q)}`;
             console.error('using url: ' + url);
             const xhr = new XMLHttpRequest();
@@ -155,6 +154,12 @@ WallpaperItem {
             xhr.timeout = 5000;
             xhr.send();
         });
+    }
+
+    function sendRefreshNotification(query) {
+        var note = refreshNotification.createObject(root);
+        note.text = "Fetching a new wallpaper with search term " + query;
+        note.sendEvent();
     }
 
     function sendFailureNotification(msg) {
@@ -242,10 +247,7 @@ WallpaperItem {
         PlasmaCore.Action {
             text: i18n("Refresh Wallpaper")
             icon.name: "view-refresh"
-            onTriggered: {
-                Qt.callLater(refreshImage);
-                refreshNotification.sendEvent();
-            }
+            onTriggered: Qt.callLater(refreshImage)
         }
     ]
 
@@ -258,20 +260,22 @@ WallpaperItem {
         onTriggered: {
             console.log("refreshTimer triggered");
             Qt.callLater(refreshImage);
-            refreshNotification.sendEvent();
         }
     }
 
-    Notification {
+    Component {
         id: refreshNotification
 
-        componentName: "plasma_workspace"
-        eventId: "notification"
-        title: "Wallhaven Wallpaper"
-        text: "Fetching a new wallpaper with search term " + main.selectedQuery
-        iconName: "plugin-wallpaper"
-        urgency: Notification.HighUrgency
-        autoDelete: false
+        Notification {
+            componentName: "plasma_workspace"
+            eventId: "notification"
+            title: "Wallhaven Wallpaper"
+            text: "Fetching a new wallpaper with search term "
+            iconName: "plugin-wallpaper"
+            urgency: Notification.HighUrgency
+            autoDelete: true
+        }
+
     }
 
     Component {
@@ -284,7 +288,7 @@ WallpaperItem {
             text: "Failed to fetch a new wallpaper"
             iconName: "dialog-error"
             urgency: Notification.HighUrgency
-            autoDelete: false
+            autoDelete: true
         }
 
     }
