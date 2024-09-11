@@ -115,9 +115,10 @@ WallpaperItem {
                         let msg = "Request failed, retrying in 5 seconds...";
                         console.log(msg);
                         sendFailureNotification(msg);
-                        setTimeout(() => {
-                            return getImageData(retries - 1).then(res).catch(rej);
-                        }, 5000);
+                        retryTimer.retries = retries;
+                        retryTimer.resolve = res;
+                        retryTimer.reject = rej;
+                        retryTimer.start();
                     } else {
                         sendFailureNotification("Request failed, no more retries left" + xhr.responseText);
                         return rej("request error: " + xhr.responseText);
@@ -140,9 +141,10 @@ WallpaperItem {
                     msg = "Request failed, retrying in 5 seconds...";
                     console.log(msg);
                     sendFailureNotification(msg);
-                    setTimeout(() => {
-                        return getImageData(retries - 1).then(res).catch(rej);
-                    }, 5000);
+                    retryTimer.retries = retries;
+                    retryTimer.resolve = res;
+                    retryTimer.reject = rej;
+                    retryTimer.start();
                 } else {
                     sendFailureNotification("Request failed, no more retries left");
                     rej("failed to send request");
@@ -250,6 +252,20 @@ WallpaperItem {
             onTriggered: Qt.callLater(refreshImage)
         }
     ]
+
+    Timer {
+        id: retryTimer
+
+        property int retries
+        property var resolve
+        property var reject
+
+        interval: 5000
+        repeat: false
+        onTriggered: {
+            getImageData(retryTimer.retries - 1).then(retryTimer.resolve).catch(retryTimer.reject);
+        }
+    }
 
     Timer {
         id: refreshTimer
