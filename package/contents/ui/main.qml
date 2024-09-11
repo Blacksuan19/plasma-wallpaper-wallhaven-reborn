@@ -40,19 +40,17 @@ WallpaperItem {
     }
 
     function refreshImage() {
-        getImageData().then((data) => {
+        getImageData(3).then((data) => {
             pickImage(data);
         }).catch((e) => {
             console.error("getImageData Error:" + e);
-            var note = failureNotification.createObject(root);
-            note.text = e;
-            note.sendEvent();
+            sendFailureNotification("Failed to fetch a new wallpaper: " + e);
             main.currentUrl = "blackscreen.jpg";
             loadImage();
         });
     }
 
-    function getImageData() {
+    function getImageData(retries = 3) {
         return new Promise((res, rej) => {
             var url = `https://wallhaven.cc/api/v1/search?`;
             // categories
@@ -113,27 +111,56 @@ WallpaperItem {
             console.error('using url: ' + url);
             const xhr = new XMLHttpRequest();
             xhr.onload = () => {
-                if (xhr.status != 200)
-                    return rej("request error: " + xhr.responseText);
-
-                let data = {
-                };
-                try {
-                    data = JSON.parse(xhr.responseText);
-                } catch (e) {
-                    return rej("cannot parse response as JSON: " + xhr.responseText);
+                if (xhr.status != 200) {
+                    if (retries > 0) {
+                        let msg = "Request failed, retrying in 5 seconds...";
+                        console.log(msg);
+                        sendFailureNotification(msg);
+                        setTimeout(() => {
+                            return getImageData(retries - 1).then(res).catch(rej);
+                        }, 5000);
+                    } else {
+                        sendFailureNotification("Request failed, no more retries left" + xhr.responseText);
+                        return rej("request error: " + xhr.responseText);
+                    }
+                } else {
+                    let data = {
+                    };
+                    try {
+                        data = JSON.parse(xhr.responseText);
+                    } catch (e) {
+                        msg = "cannot parse response as JSON: " + xhr.responseText;
+                        sendFailureNotification(msg);
+                        return rej(msg);
+                    }
+                    res(data);
                 }
-                res(data);
             };
             xhr.onerror = () => {
-                rej("failed to send request");
+                if (retries > 0) {
+                    msg = "Request failed, retrying in 5 seconds...";
+                    console.log(msg);
+                    sendFailureNotification(msg);
+                    setTimeout(() => {
+                        return getImageData(retries - 1).then(res).catch(rej);
+                    }, 5000);
+                } else {
+                    sendFailureNotification("Request failed, no more retries left");
+                    rej("failed to send request");
+                }
             };
             xhr.open('GET', url);
             xhr.setRequestHeader('X-API-Key', main.configuration.APIKey);
             xhr.setRequestHeader('User-Agent', 'wallhaven-wallpaper-kde-plugin');
-            xhr.timeout = 15000;
+            xhr.timeout = 5000;
             xhr.send();
         });
+    }
+
+    function sendFailureNotification(msg) {
+        var note = failureNotification.createObject(root);
+        note.text = msg;
+        note.sendEvent();
     }
 
     function pickImage(d) {
@@ -158,8 +185,7 @@ WallpaperItem {
             main.configuration.currentWallpaperThumbnail = imageObj.thumbs.small;
             main.configuration.currentWallpaperUrl = imageObj.url;
         } else {
-            var note = failureNotification.createObject(root);
-            note.sendEvent();
+            sendFailureNotification("No images found");
             main.configuration.currentWallpaperThumbnail = "";
             main.configuration.currentWallpaperUrl = "";
             main.currentUrl = "blackscreen.jpg";
@@ -231,7 +257,7 @@ WallpaperItem {
         triggeredOnStart: true
         onTriggered: {
             console.log("refreshTimer triggered");
-            refreshImage();
+            Qt.callLater(refreshImage);
             refreshNotification.sendEvent();
         }
     }
