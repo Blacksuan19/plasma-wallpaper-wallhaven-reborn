@@ -38,11 +38,15 @@ WallpaperItem {
         return (b == 0) ? a : greatestCommonDenominator(b, a % b);
     }
 
+    function log(msg) {
+        console.log("Wallhaven Wallpaper: " + msg);
+    }
+
     function refreshImage() {
         getImageData(3).then((data) => {
             pickImage(data);
         }).catch((e) => {
-            console.error("getImageData Error:" + e);
+            log("getImageData Error:" + e);
             sendFailureNotification("Failed to fetch a new wallpaper: " + e);
             main.currentUrl = "blackscreen.jpg";
             loadImage();
@@ -104,16 +108,16 @@ WallpaperItem {
 
             main.currentSearchTermIndex = term_index;
             let final_q = qs[term_index];
-            console.log("transformed query: " + final_q);
+            log("transformed query: " + final_q);
             sendRefreshNotification(final_q);
             url += `q=${encodeURIComponent(final_q)}`;
-            console.error('using url: ' + url);
+            log('using url: ' + url);
             const xhr = new XMLHttpRequest();
             xhr.onload = () => {
                 if (xhr.status != 200) {
                     if (retries > 0) {
                         let msg = "Request failed, retrying in 5 seconds...";
-                        console.log(msg);
+                        log(msg);
                         sendFailureNotification(msg);
                         retryTimer.retries = retries;
                         retryTimer.resolve = res;
@@ -139,7 +143,7 @@ WallpaperItem {
             xhr.onerror = () => {
                 if (retries > 0) {
                     let msg = "Request failed, retrying in 5 seconds...";
-                    console.log(msg);
+                    log(msg);
                     sendFailureNotification(msg);
                     retryTimer.retries = retries;
                     retryTimer.resolve = res;
@@ -274,7 +278,7 @@ WallpaperItem {
         repeat: true
         triggeredOnStart: true
         onTriggered: {
-            console.log("refreshTimer triggered");
+            log("refreshTimer triggered");
             Qt.callLater(refreshImage);
         }
     }
