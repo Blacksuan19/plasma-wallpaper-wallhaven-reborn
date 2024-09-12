@@ -76,3 +76,14 @@ if after the above steps the wallpaper is still not fetched or applied, you can 
 
 - restart plasmashell with `killall plasmashell && kstart5 plasmashell`.
 - refresh the wallpaper from context menu or settings page.
+
+## Reporting Bugs
+
+if you encounter any issues with the plugin, you can report them on the issue tracker using the following steps:
+
+- open a terminal and start journalctl with `journalctl -f | grep -i --line-buffered wallhaven` this will show logs related to the plugin.
+- reproduce the issue.
+- copy the logs from the terminal and paste them in the issue description.
+- describe the issue in detail, and if possible provide steps to reproduce the issue.
+
+if the issue cannot be reproduced, you may still open an issue with a description of the issue and any relevant logs using `journalctl -b -0 | grep -i wallhaven`, this will show logs related to the plugin from the current boot.
