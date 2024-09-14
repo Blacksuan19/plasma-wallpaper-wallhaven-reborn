@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
-      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
 
   <group name="General">
@@ -51,7 +50,7 @@
     </entry>
     <entry name="Sorting" type="string">
       <label>Sort by date added, relevance, random, views, favorites or top list</label>
-      <default>date_added</default>
+      <default>random</default>
     </entry>
     <entry name="Top Range" type="string">
       <label>Range limit when sorting by top list</label>
