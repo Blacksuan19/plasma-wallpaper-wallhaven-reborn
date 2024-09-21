@@ -68,6 +68,14 @@
       <label>Need this to enable a refetch button in the config page that bypasses the apply button.</label>
       <default>false</default>
     </entry>
+    <entry name="RefreshNotification" type="bool">
+      <label>Whether to show notification when wallpaper is being refreshed.</label>
+      <default>true</default>
+    </entry>
+    <entry name="ErrorNotification" type="bool">
+      <label>Whether to show notification when an error occurs.</label>
+      <default>true</default>
+    </entry>
     <entry name="currentWallpaperThumbnail" type="String">
       <label>Small wallpaper preview</label>
       <default></default>

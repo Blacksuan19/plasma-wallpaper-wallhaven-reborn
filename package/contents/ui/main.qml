@@ -163,12 +163,18 @@ WallpaperItem {
     }
 
     function sendRefreshNotification(query) {
+        if (!main.configuration.RefreshNotification)
+            return ;
+
         var note = refreshNotification.createObject(root);
         note.text = "Fetching a new wallpaper with search term " + query;
         note.sendEvent();
     }
 
     function sendFailureNotification(msg) {
+        if (!main.configuration.ErrorNotification)
+            return ;
+
         var note = failureNotification.createObject(root);
         note.text = msg;
         note.sendEvent();

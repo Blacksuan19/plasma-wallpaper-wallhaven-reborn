@@ -47,6 +47,8 @@ Kirigami.FormLayout {
     property bool cfg_PuritySFW
     property bool cfg_PuritySketchy
     property bool cfg_PurityNSFW
+    property bool cfg_RefreshNotification
+    property bool cfg_ErrorNotification
 
     function refreshImage() {
         wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
@@ -251,6 +253,41 @@ Kirigami.FormLayout {
                 checked: cfg_PurityNSFW
                 onToggled: {
                     cfg_PurityNSFW = checked;
+                }
+            }
+
+        }
+
+    }
+
+    GroupBox {
+        id: notificationToggle
+
+        Kirigami.FormData.label: i18n("Show Notification:")
+        Layout.bottomMargin: 20
+
+        RowLayout {
+            anchors.fill: parent
+
+            CheckBox {
+                text: i18n("Refresh")
+                checked: cfg_RefreshNotification
+                ToolTip.text: "Show a notification when the wallpaper is refreshed"
+                ToolTip.visible: hovered
+                onToggled: {
+                    cfg_RefreshNotification = checked;
+                    wallpaperConfiguration.refreshNotification = checked;
+                }
+            }
+
+            CheckBox {
+                text: i18n("Error")
+                checked: cfg_ErrorNotification
+                ToolTip.text: "Show a notification when an error occurs"
+                ToolTip.visible: hovered
+                onToggled: {
+                    cfg_ErrorNotification = checked;
+                    wallpaperConfiguration.errorNotification = checked;
                 }
             }
 
