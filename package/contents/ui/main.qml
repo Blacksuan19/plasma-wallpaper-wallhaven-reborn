@@ -202,7 +202,9 @@ WallpaperItem {
             main.configuration.currentWallpaperThumbnail = imageObj.thumbs.small;
             main.configuration.currentWallpaperUrl = imageObj.url;
         } else {
-            sendFailureNotification("No images found");
+            let msg = "No images found for given query " + d.meta.query + " with the current settings";
+            sendFailureNotification(msg);
+            log(msg);
             main.configuration.currentWallpaperThumbnail = "";
             main.configuration.currentWallpaperUrl = "";
             main.currentUrl = "blackscreen.jpg";
