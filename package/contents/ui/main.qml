@@ -195,6 +195,9 @@ WallpaperItem {
             } else {
                 index = Math.floor(Math.random() * d.data.length);
             }
+            if (index >= d.data.length)
+                index = index % d.data.length;
+
             const imageObj = d.data[index] || {
             };
             main.currentUrl = imageObj.path;
