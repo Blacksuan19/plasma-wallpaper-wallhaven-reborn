@@ -422,6 +422,8 @@ Kirigami.FormLayout {
             from: 1
             to: 10
             editable: true
+            ToolTip.text: "max number of retries"
+            ToolTip.visible: hovered
             textFromValue: function(value, locale) {
                 return " " + value + " times";
             }
