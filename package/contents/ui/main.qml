@@ -27,6 +27,8 @@ WallpaperItem {
     readonly property bool blur: main.configuration.Blur
     readonly property bool refreshSignal: main.configuration.RefetchSignal
     readonly property string sorting: main.configuration.Sorting
+    readonly property int retryRequestCount: main.configuration.RetryRequestCount
+    readonly property int retryRequestDelay: main.configuration.RetryRequestDelay
     readonly property size sourceSize: Qt.size(main.width * Screen.devicePixelRatio, main.height * Screen.devicePixelRatio)
     readonly property string aspectRatio: {
         var d = greatestCommonDenominator(main.width, main.height);
@@ -43,7 +45,7 @@ WallpaperItem {
     }
 
     function refreshImage() {
-        getImageData(3).then((data) => {
+        getImageData(main.retryRequestCount).then((data) => {
             pickImage(data);
         }).catch((e) => {
             log("getImageData Error:" + e);
@@ -53,7 +55,7 @@ WallpaperItem {
         });
     }
 
-    function getImageData(retries = 3) {
+    function getImageData(retries) {
         return new Promise((res, rej) => {
             var url = `https://wallhaven.cc/api/v1/search?`;
             // categories
@@ -116,7 +118,7 @@ WallpaperItem {
             xhr.onload = () => {
                 if (xhr.status != 200) {
                     if (retries > 0) {
-                        let msg = "Request failed, retrying in 5 seconds...";
+                        let msg = `Request failed, retrying in ${main.retryRequestDelay} seconds...`;
                         log(msg);
                         sendFailureNotification(msg);
                         retryTimer.retries = retries;
@@ -142,7 +144,7 @@ WallpaperItem {
             };
             xhr.onerror = () => {
                 if (retries > 0) {
-                    let msg = "Request failed, retrying in 5 seconds...";
+                    let msg = `Request failed, retrying in ${main.retryRequestDelay} seconds...`;
                     log(msg);
                     sendFailureNotification(msg);
                     retryTimer.retries = retries;
@@ -275,7 +277,7 @@ WallpaperItem {
         property var resolve
         property var reject
 
-        interval: 5000
+        interval: main.retryRequestDelay * 1000
         repeat: false
         onTriggered: {
             getImageData(retryTimer.retries - 1).then(retryTimer.resolve).catch(retryTimer.reject);

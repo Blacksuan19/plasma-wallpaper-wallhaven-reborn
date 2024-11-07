@@ -38,6 +38,8 @@ Kirigami.FormLayout {
     property int cfg_FillMode
     property int cfg_WallpaperDelay: 60
     property int cfg_WallpaperLimit: 100
+    property int cfg_RetryRequestCount: 3
+    property int cfg_RetryRequestDelay: 5
     property string cfg_Sorting
     property string cfg_TopRange
     property string cfg_SearchColor
@@ -385,6 +387,46 @@ Kirigami.FormLayout {
             onClicked: {
                 focus = false;
                 refreshImage();
+            }
+        }
+
+    }
+
+    RowLayout {
+        Kirigami.FormData.label: i18n("Retry Failed request every:")
+        Layout.bottomMargin: 10
+
+        SpinBox {
+            id: retryDelaySpinBox
+
+            value: cfg_RetryRequestDelay
+            onValueChanged: cfg_RetryRequestDelay = value
+            stepSize: 1
+            from: 1
+            to: 60
+            editable: true
+            textFromValue: function(value, locale) {
+                return " " + value + " seconds";
+            }
+            valueFromText: function(text, locale) {
+                return text.replace(/ seconds/, '');
+            }
+        }
+
+        SpinBox {
+            id: retryCountSpinBox
+
+            value: cfg_RetryRequestCount
+            onValueChanged: cfg_RetryRequestCount = value
+            stepSize: 1
+            from: 1
+            to: 10
+            editable: true
+            textFromValue: function(value, locale) {
+                return " " + value + " times";
+            }
+            valueFromText: function(text, locale) {
+                return text.replace(/ times/, '');
             }
         }
 

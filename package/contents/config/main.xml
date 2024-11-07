@@ -64,6 +64,14 @@
       <label>How much time in minutes between wallpaper change.</label>
       <default>60</default>
     </entry>
+    <entry name="RetryRequestCount" type="int">
+      <label>How many times to retry request when it fails.</label>
+      <default>3</default>
+    </entry>
+    <entry name="RetryRequestDelay" type="int">
+      <label>How much time in seconds between request retries when request fails.</label>
+      <default>5</default>
+    </entry>
     <entry name="RefetchSignal" type="bool">
       <label>Need this to enable a refetch button in the config page that bypasses the apply button.</label>
       <default>false</default>
