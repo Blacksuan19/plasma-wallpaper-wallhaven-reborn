@@ -372,41 +372,6 @@ Kirigami.FormLayout {
 
     }
 
-    GroupBox {
-        id: notificationToggle
-
-        Kirigami.FormData.label: i18n("Show Notification:")
-        Layout.bottomMargin: 20
-
-        RowLayout {
-            anchors.fill: parent
-
-            CheckBox {
-                text: i18n("Refresh")
-                checked: cfg_RefreshNotification
-                ToolTip.text: "Show a notification when the wallpaper is refreshed"
-                ToolTip.visible: hovered
-                onToggled: {
-                    cfg_RefreshNotification = checked;
-                    wallpaperConfiguration.refreshNotification = checked;
-                }
-            }
-
-            CheckBox {
-                text: i18n("Error")
-                checked: cfg_ErrorNotification
-                ToolTip.text: "Show a notification when an error occurs"
-                ToolTip.visible: hovered
-                onToggled: {
-                    cfg_ErrorNotification = checked;
-                    wallpaperConfiguration.errorNotification = checked;
-                }
-            }
-
-        }
-
-    }
-
     ComboBox {
         id: sortingInput
 
@@ -540,6 +505,41 @@ Kirigami.FormLayout {
             valueFromText: function(text, locale) {
                 return text.replace(/ times/, '');
             }
+        }
+
+    }
+
+    GroupBox {
+        id: notificationToggle
+
+        Kirigami.FormData.label: i18n("Show Notification:")
+        Layout.bottomMargin: 20
+
+        RowLayout {
+            anchors.fill: parent
+
+            CheckBox {
+                text: i18n("Refresh")
+                checked: cfg_RefreshNotification
+                ToolTip.text: "Show a notification when the wallpaper is refreshed"
+                ToolTip.visible: hovered
+                onToggled: {
+                    cfg_RefreshNotification = checked;
+                    wallpaperConfiguration.refreshNotification = checked;
+                }
+            }
+
+            CheckBox {
+                text: i18n("Error")
+                checked: cfg_ErrorNotification
+                ToolTip.text: "Show a notification when an error occurs"
+                ToolTip.visible: hovered
+                onToggled: {
+                    cfg_ErrorNotification = checked;
+                    wallpaperConfiguration.errorNotification = checked;
+                }
+            }
+
         }
 
     }
