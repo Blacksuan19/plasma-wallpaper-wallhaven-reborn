@@ -112,6 +112,14 @@
       <label>Custom picture aspect ratio value</label>
       <default>3x2,4x3</default>
     </entry>
+    <entry name="ResolutionX" type="int">
+      <label>The minimum horizontal resolution.</label>
+      <default>1920</default>
+    </entry>
+    <entry name="ResolutionY" type="int">
+      <label>The minimum vertical resolution.</label>
+      <default>1080</default>
+    </entry>
   </group>
 
 </kcfg>

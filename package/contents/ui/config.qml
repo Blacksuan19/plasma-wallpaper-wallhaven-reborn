@@ -40,6 +40,8 @@ Kirigami.FormLayout {
     property int cfg_WallpaperLimit: 100
     property int cfg_RetryRequestCount: 3
     property int cfg_RetryRequestDelay: 5
+    property int cfg_ResolutionX: 1920
+    property int cfg_ResolutionY: 1080
     property string cfg_Sorting
     property string cfg_TopRange
     property string cfg_SearchColor
@@ -323,6 +325,49 @@ Kirigami.FormLayout {
                 }
             }
 
+        }
+
+    }
+
+    RowLayout {
+        id: resolutionRow
+
+        width: parent.width
+        Layout.fillWidth: true
+        Kirigami.FormData.label: i18n("Resolution:")
+
+        SpinBox {
+            id: resXInput
+
+            value: cfg_ResolutionX
+            onValueChanged: cfg_ResolutionX = value
+            stepSize: 1
+            from: 1
+            to: 15360
+            editable: true
+            textFromValue: function(value, locale) {
+                return " " + value + "px";
+            }
+            valueFromText: function(text, locale) {
+                return text.replace(/px/, '');
+            }
+        }
+
+        SpinBox {
+            id: resYInput
+
+            value: cfg_ResolutionY
+            onValueChanged: cfg_ResolutionY = value
+            stepSize: 1
+            from: 1
+            to: 15360
+            editable: true
+            textFromValue: function(value, locale) {
+                return " " + value + "px";
+            }
+            valueFromText: function(text, locale) {
+                return text.replace(/px/, '');
+            }
         }
 
     }

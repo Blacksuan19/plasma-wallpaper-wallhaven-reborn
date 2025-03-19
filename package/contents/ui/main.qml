@@ -97,7 +97,7 @@ WallpaperItem {
                 url += `topRange=${main.configuration.TopRange}&`;
 
             // dimensions
-            url += `atleast=${main.sourceSize.width}x${main.sourceSize.height}&`;
+            url += `atleast=${main.configuration.ResolutionX}x${main.configuration.ResolutionY}&`;
             if (!wallpaper.configuration.RatioAny) {
                 var ratios = [];
                 if (wallpaper.configuration.Ratio169)
