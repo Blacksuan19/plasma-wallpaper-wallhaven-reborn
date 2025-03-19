@@ -51,12 +51,15 @@ Kirigami.FormLayout {
     property bool cfg_PurityNSFW
     property bool cfg_RefreshNotification
     property bool cfg_ErrorNotification
+    property bool cfg_RatioAny
+    property bool cfg_Ratio169
+    property bool cfg_Ratio1610
+    property bool cfg_RatioCustom
+    property string cfg_RatioCustomValue
 
     function refreshImage() {
         wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
     }
-
-    twinFormLayouts: parentLayout
 
     Image {
         id: currentWallpaper
@@ -255,6 +258,68 @@ Kirigami.FormLayout {
                 checked: cfg_PurityNSFW
                 onToggled: {
                     cfg_PurityNSFW = checked;
+                }
+            }
+
+        }
+
+    }
+
+    GroupBox {
+        id: aspectRatioInput
+
+        Kirigami.FormData.label: i18n("Aspect ratio:")
+        Layout.fillWidth: false
+
+        RowLayout {
+            anchors.fill: parent
+
+            CheckBox {
+                text: i18n("Any")
+                checked: cfg_RatioAny
+                onToggled: {
+                    cfg_RatioAny = checked;
+                }
+            }
+
+            CheckBox {
+                text: "16x9"
+                checked: cfg_Ratio169
+                enabled: !cfg_RatioAny
+                onToggled: {
+                    cfg_Ratio169 = checked;
+                }
+            }
+
+            CheckBox {
+                text: "16x10"
+                checked: cfg_Ratio1610
+                enabled: !cfg_RatioAny
+                onToggled: {
+                    cfg_Ratio1610 = checked;
+                }
+            }
+
+            CheckBox {
+                text: i18n("Custom")
+                checked: cfg_RatioCustom
+                enabled: !cfg_RatioAny
+                onToggled: {
+                    cfg_RatioCustom = checked;
+                }
+            }
+
+            TextField {
+                id: customRatioInput
+
+                ToolTip.text: "Custom aspect ratios separated by comma (e.g. 16x9,16x10)"
+                ToolTip.visible: customRatioInput.activeFocus
+                width: 50
+                text: cfg_RatioCustomValue
+                visible: cfg_RatioCustom
+                enabled: !cfg_RatioAny
+                onTextChanged: {
+                    cfg_RatioCustomValue = text;
                 }
             }
 

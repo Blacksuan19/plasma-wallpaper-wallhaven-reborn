@@ -98,7 +98,19 @@ WallpaperItem {
 
             // dimensions
             url += `atleast=${main.sourceSize.width}x${main.sourceSize.height}&`;
-            url += `ratios=${encodeURIComponent(main.aspectRatio)}&`;
+            if (!wallpaper.configuration.RatioAny) {
+                var ratios = [];
+                if (wallpaper.configuration.Ratio169)
+                    ratios.push("16x9");
+
+                if (wallpaper.configuration.Ratio1610)
+                    ratios.push("16x10");
+
+                if (wallpaper.configuration.RatioCustom)
+                    ratios.push(wallpaper.configuration.RatioCustomValue);
+
+                url += `ratios=${ratios.join(',')}&`;
+            }
             /// query
             var user_q = main.configuration.Query;
             let qs = user_q.split(",");
