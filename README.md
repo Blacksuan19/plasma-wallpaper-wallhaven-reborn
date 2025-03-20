@@ -59,6 +59,16 @@ for more information about the wallhaven API, you can check the
 
 ## Installation
 
+### Arch Linux
+
+Install the plugin from the
+[AUR](https://aur.archlinux.org/packages/plasma6-applets-wallhaven-reborn-git)
+(thanks to @cyqsimon for maintaining the package)
+
+```bash
+yay -S plasma6-applets-wallhaven-reborn-git
+```
+
 ### KDE Store
 
 Install the plugin from the KDE Store Plasma 6 version
