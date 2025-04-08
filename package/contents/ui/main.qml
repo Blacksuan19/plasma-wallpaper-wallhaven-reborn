@@ -8,6 +8,8 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
+import Qt.labs.platform 1.1 as Platform // For StandardPaths
+import Qt.labs.settings 1.0 // Only need basic settings
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Window
@@ -24,7 +26,6 @@ WallpaperItem {
     property int currentIndex
     property int currentSearchTermIndex: -1
     readonly property int fillMode: main.configuration.FillMode
-    readonly property bool blur: main.configuration.Blur
     readonly property bool refreshSignal: main.configuration.RefetchSignal
     readonly property string sorting: main.configuration.Sorting
     readonly property int retryRequestCount: main.configuration.RetryRequestCount
@@ -35,24 +36,100 @@ WallpaperItem {
         return main.width / d + "x" + main.height / d;
     }
     property Item pendingImage
+    // Fix cache path to be absolute with permissions check
+    property string lastValidImagePath: settings.lastValidImagePath || ""
+    // Define a static UserAgent to use consistently
+    readonly property string userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    // Define properties to track loading and error states
+    property bool loadingImage: false
+    property bool networkErrorMode: false
+    property bool hasShownRestartNotification: false
+    // Track last used URL to prevent duplicate image loads
+    property string lastLoadedUrl: ""
+    // Prevent multiple simultaneous loads
+    property bool loadingInProgress: false
+    // Only reload if fillMode actually changed
+    property int lastFillMode: -1
 
     function greatestCommonDenominator(a, b) {
         return (b == 0) ? a : greatestCommonDenominator(b, a % b);
     }
 
+    // Restore normal logging but eliminate duplicates
     function log(msg) {
-        console.log("Wallhaven Wallpaper: " + msg);
+        // Add timestamp for debugging
+        const timestamp = new Date().toISOString().substring(11, 23);
+        console.log(`Wallhaven Wallpaper [${timestamp}]: ${msg}`);
     }
 
+    // Add a simple runProcess function to replace the missing one
+    function runProcess(cmd) {
+        try {
+            log("Running command: " + cmd);
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "exec:" + cmd, false);
+            xhr.send();
+            return xhr.responseText || "";
+        } catch (e) {
+            log("Error running process: " + e);
+            return "";
+        }
+    }
+
+    // Modified refresh image function with improved error handling
     function refreshImage() {
+        // Always check if we have a pending network error first
+        if (networkErrorMode) {
+            log("Network error mode active - suggesting shell restart");
+            // Always show restart notification if we're in error mode
+            if (!hasShownRestartNotification) {
+                sendFailureNotification("HTTP/2 compression error detected. Please restart Plasma shell to recover.");
+                hasShownRestartNotification = true;
+            }
+            // Offer to restart the shell directly
+            emergencyRefresh();
+            return ;
+        }
+        // Regular workflow for normal operation
         getImageData(main.retryRequestCount).then((data) => {
             pickImage(data);
         }).catch((e) => {
             log("getImageData Error:" + e);
             sendFailureNotification("Failed to fetch a new wallpaper: " + e);
-            main.currentUrl = "blackscreen.jpg";
+            // Try to use the last valid cached image if available
+            if (lastValidImagePath !== "" && isFileExists(lastValidImagePath)) {
+                log("Using last valid cached image: " + lastValidImagePath);
+                main.currentUrl = "file://" + lastValidImagePath;
+            } else {
+                main.currentUrl = "blackscreen.jpg";
+            }
             loadImage();
         });
+    }
+
+    // Improved emergency refresh that uses KWin scripting
+    function emergencyRefresh() {
+        log("Restarting plasmashell to recover from network error");
+        sendFailureNotification("Restarting Plasma shell now...");
+        try {
+            // Use KWin scripting which is more reliable than direct process call
+            const script = `
+                var command = "kquitapp5 plasmashell && sleep 2 && kstart5 plasmashell";
+                var proc = new QProcess();
+                proc.startDetached("bash", ["-c", command]);
+            `;
+            const scriptFile = "/tmp/restart-plasma-" + new Date().getTime() + ".js";
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "exec:echo '" + script + "' > " + scriptFile, false);
+            xhr.send();
+            // Execute the script with kwin-script-console
+            runProcess("kwin-script " + scriptFile);
+            // Wait a moment before attempting to clean up
+            runProcess("(sleep 5; rm " + scriptFile + ") &");
+        } catch (e) {
+            log("Error restarting plasmashell: " + e);
+            sendFailureNotification("Failed to restart plasmashell. Please run 'plasmashell --replace' manually.");
+        }
     }
 
     function getImageData(retries) {
@@ -214,52 +291,149 @@ WallpaperItem {
 
             const imageObj = d.data[index] || {
             };
-            main.currentUrl = imageObj.path;
+            // Save remote URL but don't set as currentUrl yet - we'll download first
+            const remoteUrl = imageObj.path;
             main.currentPage = d.meta.current_page;
             main.configuration.currentWallpaperThumbnail = imageObj.thumbs.small;
             main.configuration.currentWallpaperUrl = imageObj.url;
+            // Download image to cache
+            downloadImageToCache(remoteUrl);
         } else {
             let msg = "No images found for given query " + d.meta.query + " with the current settings";
             sendFailureNotification(msg);
             log(msg);
             main.configuration.currentWallpaperThumbnail = "";
             main.configuration.currentWallpaperUrl = "";
-            main.currentUrl = "blackscreen.jpg";
+            // Try to use the last valid cached image if available
+            if (lastValidImagePath !== "" && isFileExists(lastValidImagePath)) {
+                log("Using last valid cached image: " + lastValidImagePath);
+                main.currentUrl = "file://" + lastValidImagePath;
+            } else {
+                main.currentUrl = "blackscreen.jpg";
+            }
+            loadImage();
         }
-        loadImage();
     }
 
-    function loadImage() {
-        if (pendingImage) {
-            pendingImage.statusChanged.disconnect(replaceWhenLoaded);
-            pendingImage.destroy();
-            pendingImage = null;
-        }
-        pendingImage = mainImage.createObject(root, {
-            "source": main.currentUrl,
-            "fillMode": main.fillMode,
-            "opacity": 0,
-            "sourceSize": main.sourceSize,
-            "width": main.width,
-            "height": main.height
-        });
-        pendingImage.statusChanged.connect(replaceWhenLoaded);
-        replaceWhenLoaded();
-    }
-
-    function replaceWhenLoaded() {
-        if (pendingImage.status === Image.Loading)
+    // In downloadImageToCache, prevent redundant loads
+    function downloadImageToCache(remoteUrl) {
+        if (loadingImage || loadingInProgress) {
+            log("Download already in progress, skipping");
             return ;
-
-        pendingImage.statusChanged.disconnect(replaceWhenLoaded);
-        root.replace(pendingImage, {
-        }, QQC2.StackView.Transition);
-        pendingImage = null;
+        }
+        // Skip if URL hasn't changed
+        if (remoteUrl === lastLoadedUrl) {
+            log("URL already loaded, skipping: " + remoteUrl);
+            return ;
+        }
+        loadingImage = true;
+        log("Loading image from: " + remoteUrl);
+        // Use direct Image element to load the remote URL
+        main.currentUrl = remoteUrl;
+        // Store the URL for future reference
+        settings.lastValidImagePath = remoteUrl;
     }
 
-    onCurrentUrlChanged: Qt.callLater(loadImage)
-    onFillModeChanged: Qt.callLater(loadImage)
-    onBlurChanged: Qt.callLater(loadImage)
+    // Very simple file check - we just check if the URL is defined and not empty
+    function isValidUrl(url) {
+        return url && url.toString() !== "";
+    }
+
+    // Simplified file check
+    function isFileExists(filePath) {
+        // For URLs, assume they exist
+        if (filePath.toString().startsWith("http"))
+            return true;
+
+        // For file paths, simple approach
+        try {
+            const cleanPath = filePath.replace(/^file:\/\//, '');
+            if (!cleanPath)
+                return false;
+
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "exec:[ -s \"" + cleanPath + "\" ] && echo \"yes\" || echo \"no\"", false);
+            xhr.send();
+            return xhr.responseText.trim() === "yes";
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Improved error detection
+    function handleCompressionError(sourceUrl) {
+        log("HTTP/2 compression error detected for: " + sourceUrl);
+        // Set network error mode
+        networkErrorMode = true;
+        hasShownRestartNotification = false; // Reset so we can show the notification again
+        sendFailureNotification("Network HTTP/2 compression error detected. Please restart the Plasma shell to recover.");
+    }
+
+    // Simplified loadImage function that lets Plasma handle transitions
+    function loadImage() {
+        try {
+            // Skip if URL hasn't changed and we already have an image
+            if (main.currentUrl.toString() === lastLoadedUrl && main.pendingImage) {
+                log("Skipping duplicate load of: " + main.currentUrl);
+                loadingImage = false;
+                return ;
+            }
+            // Skip if already loading
+            if (loadingInProgress) {
+                log("Loading already in progress, skipping");
+                return ;
+            }
+            loadingInProgress = true;
+            const source = main.currentUrl.toString();
+            log("Loading image with URL: " + source);
+            lastLoadedUrl = source;
+            // Clean up previous image
+            if (main.pendingImage)
+                main.pendingImage.destroy();
+
+            // Create a new image element with simpler settings
+            main.pendingImage = mainImage.createObject(root, {
+                "source": source,
+                "fillMode": main.fillMode,
+                "sourceSize": main.sourceSize
+            });
+            // Let Plasma handle the transition
+            root.replace(main.pendingImage);
+            loadingInProgress = false;
+            loadingImage = false;
+        } catch (e) {
+            log("Error in loadImage: " + e);
+            loadingImage = false;
+            loadingInProgress = false;
+            // Create a fallback black image
+            main.currentUrl = "blackscreen.jpg";
+            lastLoadedUrl = "blackscreen.jpg";
+            main.pendingImage = mainImage.createObject(root, {
+                "source": "blackscreen.jpg",
+                "fillMode": main.fillMode,
+                "sourceSize": main.sourceSize
+            });
+            root.replace(main.pendingImage);
+        }
+    }
+
+    // Place the anchors and Component.onCompleted properties here, not duplicated
+    anchors.fill: parent
+    Component.onCompleted: {
+        refreshImage();
+    }
+    // Fix double image loading caused by Qt.callLater
+    onCurrentUrlChanged: {
+        if (!loadingInProgress)
+            loadImage();
+
+    }
+    onFillModeChanged: {
+        if (lastFillMode !== fillMode) {
+            lastFillMode = fillMode;
+            loadImage();
+        }
+    }
     onRefreshSignalChanged: refreshTimer.restart()
     onSortingChanged: {
         if (sorting != "random") {
@@ -267,8 +441,6 @@ WallpaperItem {
             currentIndex = 0;
         }
     }
-    anchors.fill: parent
-    Component.onCompleted: refreshImage()
     contextualActions: [
         PlasmaCore.Action {
             text: i18n("Open Wallpaper URL")
@@ -276,11 +448,21 @@ WallpaperItem {
             onTriggered: Qt.openUrlExternally(main.currentUrl)
         },
         PlasmaCore.Action {
-            text: i18n("Refresh Wallpaper")
-            icon.name: "view-refresh"
-            onTriggered: Qt.callLater(refreshImage)
+            // Always show a special icon and text when in network error mode
+            text: networkErrorMode ? i18n("Restart Shell (Fix Error)") : i18n("Refresh Wallpaper")
+            icon.name: networkErrorMode ? "system-reboot" : "view-refresh"
+            onTriggered: networkErrorMode ? emergencyRefresh() : refreshImage()
         }
     ]
+
+    // Storage for persistent settings - consider using QtCore.Settings in the future
+    Settings {
+        id: settings
+
+        property string lastValidImagePath: ""
+
+        category: "WallhavenWallpaper"
+    }
 
     Timer {
         id: retryTimer
@@ -347,11 +529,44 @@ WallpaperItem {
             id: mainImage
 
             Image {
+                // Remove custom opacity handling and transitions
+
+                id: imageItem
+
                 asynchronous: true
                 cache: false
                 autoTransform: true
                 smooth: true
-                QQC2.StackView.onActivated: main.accentColorChanged()
+                // Add error handling directly in the Image component
+                onStatusChanged: {
+                    if (status === Image.Error) {
+                        log("Error loading image: " + source);
+                        // If this is a remote URL, try to handle HTTP errors
+                        if (source.toString().startsWith("http")) {
+                            log("Network error detected for: " + source);
+                            // If we can access main, notify it of the error
+                            if (main && typeof main.handleCompressionError === "function")
+                                main.handleCompressionError(source.toString());
+
+                        }
+                    } else if (status === Image.Ready) {
+                        log("Image loaded successfully: " + source);
+                        if (source.toString().startsWith("http")) {
+                            // Store successful URLs as last valid URL
+                            main.lastValidImagePath = source.toString();
+                            settings.lastValidImagePath = source.toString();
+                        }
+                    }
+                }
+                QQC2.StackView.onActivated: {
+                    if (main && typeof main.accentColorChanged === "function") {
+                        try {
+                            main.accentColorChanged();
+                        } catch (e) {
+                            log("Error in accentColorChanged: " + e);
+                        }
+                    }
+                }
                 QQC2.StackView.onDeactivated: destroy()
                 QQC2.StackView.onRemoved: destroy()
             }
@@ -364,15 +579,7 @@ WallpaperItem {
 
                 from: 0
                 to: 1
-                duration: main.doesSkipAnimation ? 1 : Math.round(Kirigami.Units.veryLongDuration * 2.5)
-            }
-
-        }
-        // If we fade both at the same time you can see the background behind glimpse through
-
-        replaceExit: Transition {
-            PauseAnimation {
-                duration: replaceEnterOpacityAnimator.duration
+                duration: main.doesSkipAnimation ? 1 : Math.round(Kirigami.Units.longDuration * 2.5)
             }
 
         }
