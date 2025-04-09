@@ -52,10 +52,10 @@ for more information about the wallhaven API, you can check the
 
 - the plugin cannot be set as lock screen wallpaper.
   ([networking related](https://bugs.kde.org/show_bug.cgi?id=483094))
-- ~~wallpaper preview not shown on the settings wallpaper KCM.~~ fixed on plasma
-  6.3
 - current wallpaper is not shown in the plugin settings page the first time the
   plugin is set as wallpaper.
+- scrollbar does not show up again when window is resized to a smaller size
+  after being resized to a larger size.
 
 ## Installation
 
