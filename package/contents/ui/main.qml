@@ -31,10 +31,6 @@ WallpaperItem {
     readonly property int retryRequestCount: main.configuration.RetryRequestCount
     readonly property int retryRequestDelay: main.configuration.RetryRequestDelay
     readonly property size sourceSize: Qt.size(main.width * Screen.devicePixelRatio, main.height * Screen.devicePixelRatio)
-    readonly property string aspectRatio: {
-        var d = greatestCommonDenominator(main.width, main.height);
-        return main.width / d + "x" + main.height / d;
-    }
     property Item pendingImage
     // Fix cache path to be absolute with permissions check
     property string lastValidImagePath: settings.lastValidImagePath || ""
@@ -50,10 +46,6 @@ WallpaperItem {
     property bool loadingInProgress: false
     // Only reload if fillMode actually changed
     property int lastFillMode: -1
-
-    function greatestCommonDenominator(a, b) {
-        return (b == 0) ? a : greatestCommonDenominator(b, a % b);
-    }
 
     // Restore normal logging but eliminate duplicates
     function log(msg) {
