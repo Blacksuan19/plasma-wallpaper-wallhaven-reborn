@@ -32,43 +32,19 @@ WallpaperItem {
     readonly property int retryRequestDelay: main.configuration.RetryRequestDelay
     readonly property size sourceSize: Qt.size(main.width * Screen.devicePixelRatio, main.height * Screen.devicePixelRatio)
     property Item pendingImage
-    // Fix cache path to be absolute with permissions check
     property string lastValidImagePath: settings.lastValidImagePath || ""
-    // Define a static UserAgent to use consistently
     readonly property string userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    // Define properties to track loading and error states
     property bool loadingImage: false
     property bool networkErrorMode: false
     property bool hasShownRestartNotification: false
-    // Track last used URL to prevent duplicate image loads
     property string lastLoadedUrl: ""
-    // Prevent multiple simultaneous loads
     property bool loadingInProgress: false
-    // Only reload if fillMode actually changed
     property int lastFillMode: -1
 
-    // Restore normal logging but eliminate duplicates
     function log(msg) {
-        // Add timestamp for debugging
-        const timestamp = new Date().toISOString().substring(11, 23);
-        console.log(`Wallhaven Wallpaper [${timestamp}]: ${msg}`);
+        console.log(`Wallhaven Wallpaper: ${msg}`);
     }
 
-    // Add a simple runProcess function to replace the missing one
-    function runProcess(cmd) {
-        try {
-            log("Running command: " + cmd);
-            const xhr = new XMLHttpRequest();
-            xhr.open("GET", "exec:" + cmd, false);
-            xhr.send();
-            return xhr.responseText || "";
-        } catch (e) {
-            log("Error running process: " + e);
-            return "";
-        }
-    }
-
-    // Modified refresh image function with improved error handling
     function refreshImage() {
         // Always check if we have a pending network error first
         if (networkErrorMode) {
@@ -78,11 +54,8 @@ WallpaperItem {
                 sendFailureNotification("HTTP/2 compression error detected. Please restart Plasma shell to recover.");
                 hasShownRestartNotification = true;
             }
-            // Offer to restart the shell directly
-            emergencyRefresh();
             return ;
         }
-        // Regular workflow for normal operation
         getImageData(main.retryRequestCount).then((data) => {
             pickImage(data);
         }).catch((e) => {
@@ -97,31 +70,6 @@ WallpaperItem {
             }
             loadImage();
         });
-    }
-
-    // Improved emergency refresh that uses KWin scripting
-    function emergencyRefresh() {
-        log("Restarting plasmashell to recover from network error");
-        sendFailureNotification("Restarting Plasma shell now...");
-        try {
-            // Use KWin scripting which is more reliable than direct process call
-            const script = `
-                var command = "kquitapp5 plasmashell && sleep 2 && kstart5 plasmashell";
-                var proc = new QProcess();
-                proc.startDetached("bash", ["-c", command]);
-            `;
-            const scriptFile = "/tmp/restart-plasma-" + new Date().getTime() + ".js";
-            const xhr = new XMLHttpRequest();
-            xhr.open("GET", "exec:echo '" + script + "' > " + scriptFile, false);
-            xhr.send();
-            // Execute the script with kwin-script-console
-            runProcess("kwin-script " + scriptFile);
-            // Wait a moment before attempting to clean up
-            runProcess("(sleep 5; rm " + scriptFile + ") &");
-        } catch (e) {
-            log("Error restarting plasmashell: " + e);
-            sendFailureNotification("Failed to restart plasmashell. Please run 'plasmashell --replace' manually.");
-        }
     }
 
     function getImageData(retries) {
@@ -283,12 +231,10 @@ WallpaperItem {
 
             const imageObj = d.data[index] || {
             };
-            // Save remote URL but don't set as currentUrl yet - we'll download first
             const remoteUrl = imageObj.path;
             main.currentPage = d.meta.current_page;
             main.configuration.currentWallpaperThumbnail = imageObj.thumbs.small;
             main.configuration.currentWallpaperUrl = imageObj.url;
-            // Download image to cache
             downloadImageToCache(remoteUrl);
         } else {
             let msg = "No images found for given query " + d.meta.query + " with the current settings";
@@ -307,37 +253,26 @@ WallpaperItem {
         }
     }
 
-    // In downloadImageToCache, prevent redundant loads
     function downloadImageToCache(remoteUrl) {
         if (loadingImage || loadingInProgress) {
             log("Download already in progress, skipping");
             return ;
         }
-        // Skip if URL hasn't changed
         if (remoteUrl === lastLoadedUrl) {
             log("URL already loaded, skipping: " + remoteUrl);
             return ;
         }
         loadingImage = true;
         log("Loading image from: " + remoteUrl);
-        // Use direct Image element to load the remote URL
         main.currentUrl = remoteUrl;
-        // Store the URL for future reference
         settings.lastValidImagePath = remoteUrl;
     }
 
-    // Very simple file check - we just check if the URL is defined and not empty
-    function isValidUrl(url) {
-        return url && url.toString() !== "";
-    }
-
-    // Simplified file check
     function isFileExists(filePath) {
         // For URLs, assume they exist
         if (filePath.toString().startsWith("http"))
             return true;
 
-        // For file paths, simple approach
         try {
             const cleanPath = filePath.replace(/^file:\/\//, '');
             if (!cleanPath)
@@ -352,7 +287,6 @@ WallpaperItem {
         }
     }
 
-    // Improved error detection
     function handleCompressionError(sourceUrl) {
         log("HTTP/2 compression error detected for: " + sourceUrl);
         // Set network error mode
@@ -361,7 +295,6 @@ WallpaperItem {
         sendFailureNotification("Network HTTP/2 compression error detected. Please restart the Plasma shell to recover.");
     }
 
-    // Simplified loadImage function that lets Plasma handle transitions
     function loadImage() {
         try {
             // Skip if URL hasn't changed and we already have an image
@@ -397,7 +330,6 @@ WallpaperItem {
             log("Error in loadImage: " + e);
             loadingImage = false;
             loadingInProgress = false;
-            // Create a fallback black image
             main.currentUrl = "blackscreen.jpg";
             lastLoadedUrl = "blackscreen.jpg";
             main.pendingImage = mainImage.createObject(root, {
@@ -409,12 +341,10 @@ WallpaperItem {
         }
     }
 
-    // Place the anchors and Component.onCompleted properties here, not duplicated
     anchors.fill: parent
     Component.onCompleted: {
         refreshImage();
     }
-    // Fix double image loading caused by Qt.callLater
     onCurrentUrlChanged: {
         if (!loadingInProgress)
             loadImage();
@@ -440,10 +370,9 @@ WallpaperItem {
             onTriggered: Qt.openUrlExternally(main.currentUrl)
         },
         PlasmaCore.Action {
-            // Always show a special icon and text when in network error mode
             text: networkErrorMode ? i18n("Restart Shell (Fix Error)") : i18n("Refresh Wallpaper")
             icon.name: networkErrorMode ? "system-reboot" : "view-refresh"
-            onTriggered: networkErrorMode ? emergencyRefresh() : refreshImage()
+            onTriggered: refreshImage()
         }
     ]
 
@@ -521,30 +450,22 @@ WallpaperItem {
             id: mainImage
 
             Image {
-                // Remove custom opacity handling and transitions
-
                 id: imageItem
 
                 asynchronous: true
                 cache: false
                 autoTransform: true
                 smooth: true
-                // Add error handling directly in the Image component
                 onStatusChanged: {
                     if (status === Image.Error) {
                         log("Error loading image: " + source);
-                        // If this is a remote URL, try to handle HTTP errors
                         if (source.toString().startsWith("http")) {
                             log("Network error detected for: " + source);
-                            // If we can access main, notify it of the error
-                            if (main && typeof main.handleCompressionError === "function")
-                                main.handleCompressionError(source.toString());
-
+                            main.handleCompressionError(source.toString());
                         }
                     } else if (status === Image.Ready) {
                         log("Image loaded successfully: " + source);
                         if (source.toString().startsWith("http")) {
-                            // Store successful URLs as last valid URL
                             main.lastValidImagePath = source.toString();
                             settings.lastValidImagePath = source.toString();
                         }
