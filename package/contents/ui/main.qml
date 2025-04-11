@@ -548,15 +548,7 @@ WallpaperItem {
                             main.lastValidImagePath = source.toString();
                             settings.lastValidImagePath = source.toString();
                         }
-                    }
-                }
-                QQC2.StackView.onActivated: {
-                    if (main && typeof main.accentColorChanged === "function") {
-                        try {
-                            main.accentColorChanged();
-                        } catch (e) {
-                            log("Error in accentColorChanged: " + e);
-                        }
+                        main.accentColorChanged();
                     }
                 }
                 QQC2.StackView.onDeactivated: destroy()
@@ -572,6 +564,14 @@ WallpaperItem {
                 from: 0
                 to: 1
                 duration: main.doesSkipAnimation ? 1 : Math.round(Kirigami.Units.longDuration * 2.5)
+            }
+
+        }
+
+        // If we fade both at the same time you can see the background behind glimpse through
+        replaceExit: Transition {
+            PauseAnimation {
+                duration: replaceEnterOpacityAnimator.duration
             }
 
         }
