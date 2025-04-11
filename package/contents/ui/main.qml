@@ -79,39 +79,36 @@ WallpaperItem {
         });
     }
 
+    function handleRequestError(retries, errorText, resolve, reject) {
+        if (retries > 0) {
+            let msg = `Request failed, retrying in ${main.retryRequestDelay} seconds...`;
+            log(msg);
+            sendFailureNotification(msg);
+            retryTimer.retries = retries;
+            retryTimer.resolve = resolve;
+            retryTimer.reject = reject;
+            retryTimer.start();
+        } else {
+            let msg = "Request failed, no more retries left" + (errorText ? ": " + errorText : "");
+            sendFailureNotification(msg);
+            reject(msg);
+        }
+    }
+
     function getImageData(retries) {
         return new Promise((res, rej) => {
             var url = `https://wallhaven.cc/api/v1/search?`;
-            // categories
-            var categories = "";
-            if (main.configuration.CategoryGeneral)
-                categories += "1";
-            else
-                categories += "0";
-            if (main.configuration.CategoryAnime)
-                categories += "1";
-            else
-                categories += "0";
-            if (main.configuration.CategoryPeople)
-                categories += "1";
-            else
-                categories += "0";
-            // purity
-            url += `categories=${categories}&`;
-            var purity = "";
-            if (main.configuration.PuritySFW)
-                purity += "1";
-            else
-                purity += "0";
-            if (main.configuration.PuritySketchy)
-                purity += "1";
-            else
-                purity += "0";
-            if (main.configuration.PurityNSFW)
-                purity += "1";
-            else
-                purity += "0";
-            url += `purity=${purity}&`;
+            // Build URL parameters
+            url += buildBinaryParameter("categories", {
+                "CategoryGeneral": true,
+                "CategoryAnime": true,
+                "CategoryPeople": true
+            }) + "&";
+            url += buildBinaryParameter("purity", {
+                "PuritySFW": true,
+                "PuritySketchy": true,
+                "PurityNSFW": true
+            }) + "&";
             // sorting
             url += `sorting=${main.configuration.Sorting}&`;
             if (main.configuration.Sorting != "random")
@@ -122,75 +119,28 @@ WallpaperItem {
 
             // dimensions
             url += `atleast=${main.configuration.ResolutionX}x${main.configuration.ResolutionY}&`;
-            if (!wallpaper.configuration.RatioAny) {
-                var ratios = [];
-                if (wallpaper.configuration.Ratio169)
-                    ratios.push("16x9");
-
-                if (wallpaper.configuration.Ratio1610)
-                    ratios.push("16x10");
-
-                if (wallpaper.configuration.RatioCustom)
-                    ratios.push(wallpaper.configuration.RatioCustomValue);
-
-                url += `ratios=${ratios.join(',')}&`;
-            }
-            /// query
-            var user_q = main.configuration.Query;
-            let qs = user_q.split(",");
-            // select a random query from the array
-            let term_index = Math.floor(Math.random() * qs.length);
-            // avoid repeating the same query
-            if (term_index == main.currentSearchTermIndex)
-                term_index = (term_index + 1) % qs.length;
-
-            main.currentSearchTermIndex = term_index;
-            let final_q = qs[term_index];
-            log("transformed query: " + final_q);
-            sendRefreshNotification(final_q);
-            url += `q=${encodeURIComponent(final_q)}`;
+            // Aspect ratios
+            url += buildRatioParameter();
+            // Query parameter
+            url += buildQueryParameter();
             log('using url: ' + url);
             const xhr = new XMLHttpRequest();
             xhr.onload = () => {
                 if (xhr.status != 200) {
-                    if (retries > 0) {
-                        let msg = `Request failed, retrying in ${main.retryRequestDelay} seconds...`;
-                        log(msg);
-                        sendFailureNotification(msg);
-                        retryTimer.retries = retries;
-                        retryTimer.resolve = res;
-                        retryTimer.reject = rej;
-                        retryTimer.start();
-                    } else {
-                        sendFailureNotification("Request failed, no more retries left" + xhr.responseText);
-                        return rej("request error: " + xhr.responseText);
-                    }
+                    handleRequestError(retries, xhr.responseText, res, rej);
                 } else {
-                    let data = {
-                    };
                     try {
-                        data = JSON.parse(xhr.responseText);
+                        let data = JSON.parse(xhr.responseText);
+                        res(data);
                     } catch (e) {
                         let msg = "cannot parse response as JSON: " + xhr.responseText;
                         sendFailureNotification(msg);
-                        return rej(msg);
+                        rej(msg);
                     }
-                    res(data);
                 }
             };
             xhr.onerror = () => {
-                if (retries > 0) {
-                    let msg = `Request failed, retrying in ${main.retryRequestDelay} seconds...`;
-                    log(msg);
-                    sendFailureNotification(msg);
-                    retryTimer.retries = retries;
-                    retryTimer.resolve = res;
-                    retryTimer.reject = rej;
-                    retryTimer.start();
-                } else {
-                    sendFailureNotification("Request failed, no more retries left");
-                    rej("failed to send request");
-                }
+                handleRequestError(retries, null, res, rej);
             };
             xhr.open('GET', url);
             xhr.setRequestHeader('X-API-Key', main.configuration.APIKey);
@@ -198,6 +148,50 @@ WallpaperItem {
             xhr.timeout = 5000;
             xhr.send();
         });
+    }
+
+    // Helper function to build binary parameters like categories and purity
+    function buildBinaryParameter(paramName, configKeys) {
+        let result = "";
+        for (const key of Object.keys(configKeys)) {
+            result += main.configuration[key] ? "1" : "0";
+        }
+        return `${paramName}=${result}`;
+    }
+
+    // Helper function to build ratio parameter
+    function buildRatioParameter() {
+        if (wallpaper.configuration.RatioAny)
+            return "";
+
+        var ratios = [];
+        if (wallpaper.configuration.Ratio169)
+            ratios.push("16x9");
+
+        if (wallpaper.configuration.Ratio1610)
+            ratios.push("16x10");
+
+        if (wallpaper.configuration.RatioCustom)
+            ratios.push(wallpaper.configuration.RatioCustomValue);
+
+        return ratios.length > 0 ? `ratios=${ratios.join(',')}&` : "";
+    }
+
+    // Helper function to build query parameter
+    function buildQueryParameter() {
+        var user_q = main.configuration.Query;
+        let qs = user_q.split(",");
+        // select a random query from the array
+        let term_index = Math.floor(Math.random() * qs.length);
+        // avoid repeating the same query
+        if (term_index == main.currentSearchTermIndex)
+            term_index = (term_index + 1) % qs.length;
+
+        main.currentSearchTermIndex = term_index;
+        let final_q = qs[term_index];
+        log("transformed query: " + final_q);
+        sendRefreshNotification(final_q);
+        return `q=${encodeURIComponent(final_q)}`;
     }
 
     function sendRefreshNotification(query) {
