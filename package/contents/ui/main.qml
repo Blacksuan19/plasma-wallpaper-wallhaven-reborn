@@ -34,11 +34,10 @@ WallpaperItem {
     property Item pendingImage
     property string lastValidImagePath: settings.lastValidImagePath || ""
     readonly property string userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    property bool loadingImage: false
+    property bool isLoading: false // Consolidated loading flag
     property bool networkErrorMode: false
     property bool hasShownRestartNotification: false
     property string lastLoadedUrl: ""
-    property bool loadingInProgress: false
     property int lastFillMode: -1
 
     function log(msg) {
@@ -46,6 +45,11 @@ WallpaperItem {
     }
 
     function refreshImage() {
+        // Don't refresh if already loading or if a network error is active
+        if (isLoading) {
+            log("Loading in progress - skipping refresh request");
+            return ;
+        }
         // Always check if we have a pending network error first
         if (networkErrorMode) {
             log("Network error mode active - suggesting shell restart");
@@ -56,6 +60,8 @@ WallpaperItem {
             }
             return ;
         }
+        // Set loading flag - but only after we've passed initial checks
+        isLoading = true;
         getImageData(main.retryRequestCount).then((data) => {
             pickImage(data);
         }).catch((e) => {
@@ -69,6 +75,7 @@ WallpaperItem {
                 main.currentUrl = "blackscreen.jpg";
             }
             loadImage();
+            isLoading = false;
         });
     }
 
@@ -219,6 +226,7 @@ WallpaperItem {
                 if (index > 24) {
                     main.currentPage += 1;
                     main.currentIndex = 0;
+                    isLoading = false; // Reset loading state before restarting
                     refreshTimer.restart();
                     return ;
                 }
@@ -250,21 +258,19 @@ WallpaperItem {
                 main.currentUrl = "blackscreen.jpg";
             }
             loadImage();
+            isLoading = false; // Make sure to reset loading state
         }
     }
 
     function downloadImageToCache(remoteUrl) {
-        if (loadingImage || loadingInProgress) {
-            log("Download already in progress, skipping");
-            return ;
-        }
         if (remoteUrl === lastLoadedUrl) {
             log("URL already loaded, skipping: " + remoteUrl);
+            isLoading = false;
             return ;
         }
-        loadingImage = true;
         log("Loading image from: " + remoteUrl);
         main.currentUrl = remoteUrl;
+        loadImage(); // Make sure to call loadImage explicitly
         settings.lastValidImagePath = remoteUrl;
     }
 
@@ -300,36 +306,21 @@ WallpaperItem {
             // Skip if URL hasn't changed and we already have an image
             if (main.currentUrl.toString() === lastLoadedUrl && main.pendingImage) {
                 log("Skipping duplicate load of: " + main.currentUrl);
-                loadingImage = false;
+                isLoading = false;
                 return ;
             }
-            // Skip if already loading
-            if (loadingInProgress) {
-                log("Loading already in progress, skipping");
-                return ;
-            }
-            loadingInProgress = true;
-            const source = main.currentUrl.toString();
-            log("Loading image with URL: " + source);
-            lastLoadedUrl = source;
-            // Clean up previous image
-            if (main.pendingImage)
-                main.pendingImage.destroy();
-
-            // Create a new image element with simpler settings
+            log("Loading image with URL: " + main.currentUrl.toString());
+            lastLoadedUrl = main.currentUrl.toString();
             main.pendingImage = mainImage.createObject(root, {
-                "source": source,
+                "source": main.currentUrl,
                 "fillMode": main.fillMode,
                 "sourceSize": main.sourceSize
             });
             // Let Plasma handle the transition
             root.replace(main.pendingImage);
-            loadingInProgress = false;
-            loadingImage = false;
         } catch (e) {
             log("Error in loadImage: " + e);
-            loadingImage = false;
-            loadingInProgress = false;
+            isLoading = false;
             main.currentUrl = "blackscreen.jpg";
             lastLoadedUrl = "blackscreen.jpg";
             main.pendingImage = mainImage.createObject(root, {
@@ -346,9 +337,7 @@ WallpaperItem {
         refreshImage();
     }
     onCurrentUrlChanged: {
-        if (!loadingInProgress)
-            loadImage();
-
+        loadImage();
     }
     onFillModeChanged: {
         if (lastFillMode !== fillMode) {
@@ -463,6 +452,7 @@ WallpaperItem {
                             log("Network error detected for: " + source);
                             main.handleCompressionError(source.toString());
                         }
+                        isLoading = false;
                     } else if (status === Image.Ready) {
                         log("Image loaded successfully: " + source);
                         if (source.toString().startsWith("http")) {
@@ -470,6 +460,9 @@ WallpaperItem {
                             settings.lastValidImagePath = source.toString();
                         }
                         main.accentColorChanged();
+                        isLoading = false;
+                    } else if (status === Image.Loading) {
+                        log("Image loading in progress: " + source);
                     }
                 }
                 QQC2.StackView.onDeactivated: destroy()
