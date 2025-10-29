@@ -310,8 +310,11 @@ WallpaperItem {
                 "fillMode": main.fillMode,
                 "sourceSize": main.sourceSize
             });
-            // Let Plasma handle the transition
-            root.replace(main.pendingImage);
+            // Only add immediately if stack is empty (first load)
+            // Otherwise let the Image's onStatusChanged add it when ready
+            if (root.depth === 0) {
+                root.replace(main.pendingImage);
+            }
         } catch (e) {
             log("Error in loadImage: " + e);
             isLoading = false;
@@ -446,12 +449,22 @@ WallpaperItem {
                             log("Network error detected for: " + source);
                             main.handleCompressionError(source.toString());
                         }
+                        // On error, destroy pending image and keep old wallpaper visible
+                        if (imageItem === main.pendingImage) {
+                            main.pendingImage = null;
+                            imageItem.destroy();
+                        }
                         isLoading = false;
                     } else if (status === Image.Ready) {
                         log("Image loaded successfully: " + source);
                         if (source.toString().startsWith("http")) {
                             main.lastValidImagePath = source.toString();
                             settings.lastValidImagePath = source.toString();
+                        }
+                        // Add to stack now that image is loaded (if not already in stack)
+                        if (imageItem === main.pendingImage && root.depth > 0) {
+                            log("Image ready, adding to stack");
+                            root.replace(imageItem);
                         }
                         main.accentColorChanged();
                         isLoading = false;
