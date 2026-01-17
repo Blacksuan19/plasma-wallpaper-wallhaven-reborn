@@ -9,7 +9,7 @@
 */
 
 import Qt.labs.platform 1.1 as Platform // For StandardPaths
-import Qt.labs.settings 1.0 // Only need basic settings
+import QtCore as QtCore
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Window
@@ -312,9 +312,9 @@ WallpaperItem {
             });
             // Only add immediately if stack is empty (first load)
             // Otherwise let the Image's onStatusChanged add it when ready
-            if (root.depth === 0) {
+            if (root.depth === 0)
                 root.replace(main.pendingImage);
-            }
+
         } catch (e) {
             log("Error in loadImage: " + e);
             isLoading = false;
@@ -363,7 +363,7 @@ WallpaperItem {
     ]
 
     // Storage for persistent settings - consider using QtCore.Settings in the future
-    Settings {
+    QtCore.Settings {
         id: settings
 
         property string lastValidImagePath: ""
