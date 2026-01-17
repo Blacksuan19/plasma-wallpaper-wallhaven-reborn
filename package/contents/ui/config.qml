@@ -3,7 +3,7 @@
  *  Copyright 2014 Kai Uwe Broulik <kde@privat.broulik.de>
  *  Copyright 2022 Kyle Paulsen <kyle.a.paulsen@gmail.com>
  *  Copyright 2022 Link Dupont <link@sub-pop.net>
- *  Copyright 2024 Abubakar Yagoub <plasma@blacksuan19.dev>
+ *  Copyright 2024 Abubakar Yagoub <plasma@aolabs.dev>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

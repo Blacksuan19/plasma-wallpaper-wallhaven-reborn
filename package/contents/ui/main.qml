@@ -3,7 +3,7 @@
     SPDX-FileCopyrightText: 2014 Sebastian Kügler <sebas@kde.org>
     SPDX-FileCopyrightText: 2014 Kai Uwe Broulik <kde@privat.broulik.de>
     SPDX-FileCopyrightText: 2022 Link Dupont <link@sub-pop.net>
-    SPDX-FileCopyrightText: 2024 Abubakar Yagoub <plasma@blacksuan19.dev>
+    SPDX-FileCopyrightText: 2024 Abubakar Yagoub <plasma@aolabs.dev>
 
     SPDX-License-Identifier: GPL-2.0-or-later
 */
