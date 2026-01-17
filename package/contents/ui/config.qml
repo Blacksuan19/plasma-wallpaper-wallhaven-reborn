@@ -29,6 +29,8 @@ import org.kde.kquickcontrols 2.0 as KQuickControls
 Item {
     id: root
 
+    // Accept the property plasmashell passes in when creating the config UI
+    property var configDialog
     // Properties
     property var wallpaperConfiguration: wallpaper.configuration
     property alias cfg_Color: colorButton.color
