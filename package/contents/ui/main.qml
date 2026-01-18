@@ -352,7 +352,7 @@ WallpaperItem {
     contextualActions: [
         PlasmaCore.Action {
             text: i18n("Open Wallpaper URL")
-            icon.name: "external-link-symbolic"
+            icon.name: "link"
             onTriggered: Qt.openUrlExternally(main.currentUrl)
         },
         PlasmaCore.Action {
