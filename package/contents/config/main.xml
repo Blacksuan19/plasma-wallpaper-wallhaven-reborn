@@ -124,6 +124,11 @@
       <label>Path to the last valid loaded image</label>
       <default></default>
     </entry>
+    <entry name="FollowSystemTheme" type="bool">
+      <label>Follow system color scheme (Dark Mode)</label>
+      <default>false</default>
+    </entry>
+
   </group>
 
 </kcfg>

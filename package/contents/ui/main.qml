@@ -40,6 +40,8 @@ WallpaperItem {
     property bool hasShownRestartNotification: false
     property string lastLoadedUrl: ""
     property int lastFillMode: -1
+    readonly property bool systemDarkMode: Kirigami.Theme.textColor.hsvValue > Kirigami.Theme.backgroundColor.hsvValue
+    readonly property bool followSystemTheme: main.configuration.FollowSystemTheme
 
     function log(msg) {
         console.log(`Wallhaven Wallpaper: ${msg}`);
@@ -120,6 +122,10 @@ WallpaperItem {
 
             // dimensions
             url += `atleast=${main.configuration.ResolutionX}x${main.configuration.ResolutionY}&`;
+            // Only filter colors if setting is ON and system is DARK
+            if (main.configuration.FollowSystemTheme && systemDarkMode)
+                url += "colors=000000,424153&";
+
             // Aspect ratios
             url += buildRatioParameter();
             // Query parameter
@@ -189,7 +195,11 @@ WallpaperItem {
             term_index = (term_index + 1) % qs.length;
 
         main.currentSearchTermIndex = term_index;
-        let final_q = qs[term_index];
+        let final_q = qs[term_index].trim();
+        // Only add tag if setting is ON and system is DARK
+        if (main.configuration.FollowSystemTheme && systemDarkMode)
+            final_q = (final_q ? final_q + "" : "") + "+dark";
+
         log("transformed query: " + final_q);
         sendRefreshNotification(final_q);
         return `q=${encodeURIComponent(final_q)}`;
@@ -341,6 +351,15 @@ WallpaperItem {
             currentPage = 1;
             currentIndex = 0;
         }
+    }
+    onSystemDarkModeChanged: {
+        if (followSystemTheme) {
+            log("System theme changed. Dark Mode: " + systemDarkMode);
+            refreshTimer.restart();
+        }
+    }
+    onFollowSystemThemeChanged: {
+        refreshTimer.restart();
     }
     contextualActions: [
         PlasmaCore.Action {

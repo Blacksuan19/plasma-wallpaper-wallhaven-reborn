@@ -55,6 +55,7 @@ Item {
     property bool cfg_PurityNSFW
     property bool cfg_RefreshNotification
     property bool cfg_ErrorNotification
+    property bool cfg_FollowSystemTheme
     property bool cfg_RatioAny
     property bool cfg_Ratio169
     property bool cfg_Ratio1610
@@ -236,6 +237,20 @@ Item {
                     flat: true
                     Layout.alignment: Qt.AlignRight
                     Layout.fillWidth: false
+                }
+
+            }
+
+            GroupBox {
+                Kirigami.FormData.label: i18n("Color Scheme:")
+                Layout.fillWidth: true
+
+                CheckBox {
+                    text: i18n("Follow system color scheme")
+                    checked: cfg_FollowSystemTheme
+                    onToggled: cfg_FollowSystemTheme = checked
+                    ToolTip.text: i18n("Automatically add 'dark' tag and dark colors when system is in Dark Mode")
+                    ToolTip.visible: hovered
                 }
 
             }

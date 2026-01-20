@@ -33,6 +33,8 @@ Port of wallhaven wallpaper plugin by
 - show notification when fetching new wallpaper or when an error occurs.
 - add UI to allow toggling notifications.
 - retry fetching wallpaper when a network error occurs.
+- follow system color scheme to automatically fetch darker wallpapers in Dark
+  Mode.
 
 ### How to Search
 
