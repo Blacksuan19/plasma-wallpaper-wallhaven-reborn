@@ -120,6 +120,10 @@
       <label>The minimum vertical resolution.</label>
       <default>1080</default>
     </entry>
+    <entry name="lastValidImagePath" type="String">
+      <label>Path to the last valid loaded image</label>
+      <default></default>
+    </entry>
   </group>
 
 </kcfg>

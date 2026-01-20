@@ -9,7 +9,6 @@
 */
 
 import Qt.labs.platform 1.1 as Platform // For StandardPaths
-import QtCore as QtCore
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Window
@@ -19,6 +18,8 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.plasmoid
 
 WallpaperItem {
+    // Let the Image's onStatusChanged add it when ready
+
     id: main
 
     property url currentUrl
@@ -32,7 +33,7 @@ WallpaperItem {
     readonly property int retryRequestDelay: main.configuration.RetryRequestDelay
     readonly property size sourceSize: Qt.size(main.width * Screen.devicePixelRatio, main.height * Screen.devicePixelRatio)
     property Item pendingImage
-    property string lastValidImagePath: settings.lastValidImagePath || ""
+    readonly property string lastValidImagePath: main.configuration.lastValidImagePath || ""
     readonly property string userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     property bool isLoading: false // Consolidated loading flag
     property bool networkErrorMode: false
@@ -236,14 +237,12 @@ WallpaperItem {
             const remoteUrl = imageObj.path;
             main.currentPage = d.meta.current_page;
             main.configuration.currentWallpaperThumbnail = imageObj.thumbs.small;
-            main.configuration.currentWallpaperUrl = imageObj.url;
             downloadImageToCache(remoteUrl);
         } else {
             let msg = "No images found for given query " + d.meta.query + " with the current settings";
             sendFailureNotification(msg);
             log(msg);
             main.configuration.currentWallpaperThumbnail = "";
-            main.configuration.currentWallpaperUrl = "";
             // Try to use the last valid cached image if available
             if (lastValidImagePath !== "" && isFileExists(lastValidImagePath)) {
                 log("Using last valid cached image: " + lastValidImagePath);
@@ -264,8 +263,7 @@ WallpaperItem {
         }
         log("Loading image from: " + remoteUrl);
         main.currentUrl = remoteUrl;
-        loadImage(); // Make sure to call loadImage explicitly
-        settings.lastValidImagePath = remoteUrl;
+        main.configuration.lastValidImagePath = remoteUrl;
     }
 
     function isFileExists(filePath) {
@@ -310,11 +308,6 @@ WallpaperItem {
                 "fillMode": main.fillMode,
                 "sourceSize": main.sourceSize
             });
-            // Only add immediately if stack is empty (first load)
-            // Otherwise let the Image's onStatusChanged add it when ready
-            if (root.depth === 0)
-                root.replace(main.pendingImage);
-
         } catch (e) {
             log("Error in loadImage: " + e);
             isLoading = false;
@@ -361,15 +354,6 @@ WallpaperItem {
             onTriggered: refreshImage()
         }
     ]
-
-    // Storage for persistent settings - consider using QtCore.Settings in the future
-    QtCore.Settings {
-        id: settings
-
-        property string lastValidImagePath: ""
-
-        category: "WallhavenWallpaper"
-    }
 
     Timer {
         id: retryTimer
@@ -457,14 +441,20 @@ WallpaperItem {
                         isLoading = false;
                     } else if (status === Image.Ready) {
                         log("Image loaded successfully: " + source);
-                        if (source.toString().startsWith("http")) {
-                            main.lastValidImagePath = source.toString();
-                            settings.lastValidImagePath = source.toString();
-                        }
-                        // Add to stack now that image is loaded (if not already in stack)
-                        if (imageItem === main.pendingImage && root.depth > 0) {
-                            log("Image ready, adding to stack");
-                            root.replace(imageItem);
+                        if (source.toString().startsWith("http"))
+                            main.configuration.lastValidImagePath = source.toString();
+
+                        // Add to stack now that image is loaded
+                        if (imageItem === main.pendingImage) {
+                            // Only add if not already in stack (check current item)
+                            if (root.currentItem !== imageItem) {
+                                log("Image ready, adding to stack");
+                                // Use push for initial load (empty stack), replace for subsequent loads
+                                if (root.depth === 0)
+                                    root.push(imageItem);
+                                else
+                                    root.replace(imageItem);
+                            }
                         }
                         main.accentColorChanged();
                         isLoading = false;
