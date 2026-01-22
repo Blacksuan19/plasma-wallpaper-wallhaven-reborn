@@ -91,6 +91,9 @@ package on arch based distros, `kpackagetool6` on Suse based distros, and
 git clone https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn.git
 cd plasma-wallpaper-wallhaven-reborn
 kpackagetool6 --type Plasma/Wallpaper --install package/
+
+# restart plasmashell
+plasmashell --replace & disown
 ```
 
 additional setup might be required to get the plugin to work, as below:
@@ -102,7 +105,6 @@ additional setup might be required to get the plugin to work, as below:
 if after the above steps the wallpaper is still not fetched or applied, you can
 try the following:
 
-- restart plasmashell with `killall plasmashell && kstart5 plasmashell`.
 - refresh the wallpaper from context menu or settings page.
 
 ## Reporting Bugs
