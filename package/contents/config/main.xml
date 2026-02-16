@@ -128,6 +128,22 @@
       <label>Follow system color scheme (Dark Mode)</label>
       <default>false</default>
     </entry>
+    <entry name="SavedWallpapers" type="StringList">
+      <label>List of saved wallpaper URLs</label>
+      <default></default>
+    </entry>
+    <entry name="UseSavedWallpapers" type="bool">
+      <label>Use only saved wallpapers instead of fetching from Wallhaven</label>
+      <default>false</default>
+    </entry>
+    <entry name="FallbackToWallhaven" type="bool">
+      <label>Fetch from Wallhaven when saved wallpapers are exhausted</label>
+      <default>true</default>
+    </entry>
+    <entry name="ShownSavedWallpapers" type="StringList">
+      <label>Track which saved wallpapers have been shown in current cycle</label>
+      <default></default>
+    </entry>
 
   </group>
 

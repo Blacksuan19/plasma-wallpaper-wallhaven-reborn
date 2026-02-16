@@ -36,35 +36,162 @@ WallpaperItem {
     readonly property string lastValidImagePath: main.configuration.lastValidImagePath || ""
     readonly property string userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     property bool isLoading: false // Consolidated loading flag
-    property bool networkErrorMode: false
-    property bool hasShownRestartNotification: false
     property string lastLoadedUrl: ""
     property int lastFillMode: -1
     readonly property bool systemDarkMode: Kirigami.Theme.textColor.hsvValue > Kirigami.Theme.backgroundColor.hsvValue
     readonly property bool followSystemTheme: main.configuration.FollowSystemTheme
+    readonly property bool useSavedWallpapers: main.configuration.UseSavedWallpapers
+    readonly property var savedWallpapers: main.configuration.SavedWallpapers
+    readonly property bool fallbackToWallhaven: main.configuration.FallbackToWallhaven
 
     function log(msg) {
         console.log(`Wallhaven Wallpaper: ${msg}`);
     }
 
+    function saveCurrentWallpaper() {
+        if (!main.currentUrl || main.currentUrl.toString() === "" || main.currentUrl.toString() === "blackscreen.jpg") {
+            sendFailureNotification("No valid wallpaper to save");
+            return ;
+        }
+        const urlString = main.currentUrl.toString();
+        // Check if URL is already saved
+        let currentList = main.configuration.SavedWallpapers || [];
+        if (currentList.indexOf(urlString) !== -1) {
+            sendFailureNotification("Wallpaper already saved");
+            return ;
+        }
+        // Create a new array to trigger configuration save
+        let newList = currentList.slice();
+        newList.push(urlString);
+        main.configuration.SavedWallpapers = newList;
+        log("Saved wallpaper: " + urlString);
+        if (main.configuration.RefreshNotification) {
+            var note = refreshNotification.createObject(root);
+            note.text = "Wallpaper saved! Total saved: " + newList.length;
+            note.sendEvent();
+        }
+    }
+
+    function loadFromSavedWallpapers() {
+        const savedList = main.configuration.SavedWallpapers || [];
+        if (savedList.length === 0) {
+            sendFailureNotification("No saved wallpapers found. Add some using 'Save Wallpaper' context menu.");
+            isLoading = false;
+            return ;
+        }
+        // Get list of already shown wallpapers
+        let shownList = main.configuration.ShownSavedWallpapers || [];
+        // Check if we've shown all wallpapers
+        if (shownList.length >= savedList.length) {
+            log("All saved wallpapers have been shown in this cycle (" + savedList.length + " total)");
+            // If fallback is enabled, fetch from Wallhaven
+            if (fallbackToWallhaven) {
+                log("Fallback to Wallhaven enabled - fetching new wallpaper");
+                if (main.configuration.RefreshNotification) {
+                    var note = refreshNotification.createObject(root);
+                    note.text = "All saved wallpapers shown. Fetching from Wallhaven...";
+                    note.sendEvent();
+                }
+                // Reset shown list for next cycle
+                main.configuration.ShownSavedWallpapers = [];
+                // Fetch from Wallhaven
+                getImageData(main.retryRequestCount).then((data) => {
+                    pickImage(data);
+                }).catch((e) => {
+                    log("getImageData Error:" + e);
+                    sendFailureNotification("Failed to fetch from Wallhaven: " + e);
+                    isLoading = false;
+                });
+                return ;
+            } else {
+                // No fallback - notify user and reset
+                sendFailureNotification("All " + savedList.length + " saved wallpapers have been shown. Enable 'Fallback to Wallhaven' or add more wallpapers.");
+                // Reset for next cycle
+                main.configuration.ShownSavedWallpapers = [];
+                isLoading = false;
+                return ;
+            }
+        }
+        // Find wallpapers that haven't been shown yet
+        let unshownWallpapers = [];
+        for (let i = 0; i < savedList.length; i++) {
+            if (shownList.indexOf(savedList[i]) === -1)
+                unshownWallpapers.push(savedList[i]);
+
+        }
+        // Prefer wallpapers different from the currently loaded one
+        let availableWallpapers = unshownWallpapers.filter((url) => {
+            return url !== lastLoadedUrl;
+        });
+        // If no unshown wallpapers available (except current), pick from all saved wallpapers
+        if (availableWallpapers.length === 0) {
+            // Try to pick from any saved wallpaper that isn't the current one
+            availableWallpapers = savedList.filter((url) => {
+                return url !== lastLoadedUrl;
+            });
+            // If still no options (only 1 wallpaper in total), handle exhaustion case
+            if (availableWallpapers.length === 0) {
+                log("Only one saved wallpaper exists");
+                // Reset and try to fetch from Wallhaven if enabled
+                if (fallbackToWallhaven) {
+                    log("Fallback to Wallhaven enabled - fetching new wallpaper");
+                    if (main.configuration.RefreshNotification) {
+                        var note = refreshNotification.createObject(root);
+                        note.text = "Only one saved wallpaper. Fetching from Wallhaven...";
+                        note.sendEvent();
+                    }
+                    main.configuration.ShownSavedWallpapers = [];
+                    getImageData(main.retryRequestCount).then((data) => {
+                        pickImage(data);
+                    }).catch((e) => {
+                        log("getImageData Error:" + e);
+                        sendFailureNotification("Failed to fetch from Wallhaven: " + e);
+                        isLoading = false;
+                    });
+                    return ;
+                } else {
+                    sendFailureNotification("Only one saved wallpaper. Add more or enable 'Fallback to Wallhaven'.");
+                    isLoading = false;
+                    return ;
+                }
+            }
+            // We're picking from already shown wallpapers, so reset the shown list
+            log("All wallpapers shown, restarting cycle with different wallpaper");
+            shownList = [];
+        }
+        // Pick a random wallpaper from available options
+        const randomIndex = Math.floor(Math.random() * availableWallpapers.length);
+        const selectedUrl = availableWallpapers[randomIndex];
+        // Mark as shown - create new array to trigger configuration save
+        let newShownList = shownList.slice();
+        newShownList.push(selectedUrl);
+        main.configuration.ShownSavedWallpapers = newShownList;
+        log("Loading saved wallpaper (" + newShownList.length + "/" + savedList.length + "): " + selectedUrl);
+        // Show notification
+        if (main.configuration.RefreshNotification) {
+            var note = refreshNotification.createObject(root);
+            note.text = "Loading saved wallpaper " + newShownList.length + " of " + savedList.length;
+            note.sendEvent();
+        }
+        main.currentUrl = selectedUrl;
+        main.configuration.lastValidImagePath = selectedUrl;
+        loadImage();
+        isLoading = false;
+    }
+
     function refreshImage() {
-        // Don't refresh if already loading or if a network error is active
+        // Don't refresh if already loading
         if (isLoading) {
             log("Loading in progress - skipping refresh request");
             return ;
         }
-        // Always check if we have a pending network error first
-        if (networkErrorMode) {
-            log("Network error mode active - suggesting shell restart");
-            // Always show restart notification if we're in error mode
-            if (!hasShownRestartNotification) {
-                sendFailureNotification("HTTP/2 compression error detected. Please restart Plasma shell to recover.");
-                hasShownRestartNotification = true;
-            }
+        isLoading = true;
+        // Check if we should use saved wallpapers instead of fetching from API
+        if (useSavedWallpapers) {
+            log("Using saved wallpapers mode");
+            loadFromSavedWallpapers();
             return ;
         }
-        // Set loading flag - but only after we've passed initial checks
-        isLoading = true;
         getImageData(main.retryRequestCount).then((data) => {
             pickImage(data);
         }).catch((e) => {
@@ -295,14 +422,6 @@ WallpaperItem {
         }
     }
 
-    function handleCompressionError(sourceUrl) {
-        log("HTTP/2 compression error detected for: " + sourceUrl);
-        // Set network error mode
-        networkErrorMode = true;
-        hasShownRestartNotification = false; // Reset so we can show the notification again
-        sendFailureNotification("Network HTTP/2 compression error detected. Please restart the Plasma shell to recover.");
-    }
-
     function loadImage() {
         try {
             // Skip if URL hasn't changed and we already have an image
@@ -368,8 +487,13 @@ WallpaperItem {
             onTriggered: Qt.openUrlExternally(main.currentUrl)
         },
         PlasmaCore.Action {
-            text: networkErrorMode ? i18n("Restart Shell (Fix Error)") : i18n("Refresh Wallpaper")
-            icon.name: networkErrorMode ? "system-reboot" : "view-refresh"
+            text: i18n("Save Wallpaper")
+            icon.name: "bookmark-new"
+            onTriggered: saveCurrentWallpaper()
+        },
+        PlasmaCore.Action {
+            text: i18n("Refresh Wallpaper")
+            icon.name: "view-refresh"
             onTriggered: refreshImage()
         }
     ]
@@ -448,10 +572,7 @@ WallpaperItem {
                 onStatusChanged: {
                     if (status === Image.Error) {
                         log("Error loading image: " + source);
-                        if (source.toString().startsWith("http")) {
-                            log("Network error detected for: " + source);
-                            main.handleCompressionError(source.toString());
-                        }
+                        sendFailureNotification("Failed to load image. This may be a network error. Try refreshing or restart Plasma shell if issue persists.");
                         // On error, destroy pending image and keep old wallpaper visible
                         if (imageItem === main.pendingImage) {
                             main.pendingImage = null;

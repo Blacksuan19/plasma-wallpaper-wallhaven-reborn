@@ -56,6 +56,9 @@ Item {
     property bool cfg_RefreshNotification
     property bool cfg_ErrorNotification
     property bool cfg_FollowSystemTheme
+    property bool cfg_UseSavedWallpapers
+    property bool cfg_FallbackToWallhaven
+    property var cfg_SavedWallpapers
     property bool cfg_RatioAny
     property bool cfg_Ratio169
     property bool cfg_Ratio1610
@@ -189,6 +192,105 @@ Item {
                     id: colorButton
 
                     dialogTitle: i18nd("plasma_wallpaper_org.kde.image", "Select Background Color")
+                }
+
+            }
+
+            // Saved Wallpapers Section
+            Item {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: i18n("Saved Wallpapers")
+            }
+
+            GroupBox {
+                Layout.fillWidth: true
+                padding: Kirigami.Units.smallSpacing
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Kirigami.Units.smallSpacing
+
+                    CheckBox {
+                        id: useSavedWallpapersCheckbox
+
+                        text: i18n("Use saved wallpapers only")
+                        checked: cfg_UseSavedWallpapers
+                        onToggled: cfg_UseSavedWallpapers = checked
+                        ToolTip.text: i18n("When enabled, only cycle through your saved wallpapers instead of fetching from Wallhaven")
+                        ToolTip.visible: hovered
+                    }
+
+                    CheckBox {
+                        id: fallbackToWallhavenCheckbox
+
+                        text: i18n("Fetch from Wallhaven when all saved wallpapers are shown")
+                        checked: cfg_FallbackToWallhaven
+                        enabled: cfg_UseSavedWallpapers
+                        onToggled: cfg_FallbackToWallhaven = checked
+                        ToolTip.text: i18n("When all saved wallpapers have been shown once, fetch a new one from Wallhaven and restart the cycle")
+                        ToolTip.visible: hovered
+                    }
+
+                    Label {
+                        text: {
+                            const count = cfg_SavedWallpapers ? cfg_SavedWallpapers.length : 0;
+                            return i18n("Saved wallpapers: %1", count);
+                        }
+                        color: Kirigami.Theme.textColor
+                        font.pointSize: Kirigami.Theme.smallFont.pointSize
+                    }
+
+                    Label {
+                        text: i18n("Right-click desktop → 'Save Wallpaper' to add to collection")
+                        color: Kirigami.Theme.disabledTextColor
+                        font.pointSize: Kirigami.Theme.smallFont.pointSize
+                        font.italic: true
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        Layout.topMargin: Kirigami.Units.smallSpacing
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Kirigami.Units.smallSpacing
+                        Layout.topMargin: Kirigami.Units.smallSpacing
+
+                        Button {
+                            text: i18n("Copy URLs")
+                            icon.name: "edit-copy"
+                            enabled: !!(cfg_SavedWallpapers && cfg_SavedWallpapers.length > 0)
+                            onClicked: {
+                                const urls = cfg_SavedWallpapers.join("\n");
+                                clipboardHelper.text = urls;
+                                clipboardHelper.selectAll();
+                                clipboardHelper.copy();
+                            }
+                            ToolTip.text: i18n("Copy all saved wallpaper URLs to clipboard")
+                            ToolTip.visible: hovered
+                        }
+
+                        Button {
+                            text: i18n("Clear All")
+                            icon.name: "edit-clear-all"
+                            enabled: !!(cfg_SavedWallpapers && cfg_SavedWallpapers.length > 0)
+                            onClicked: {
+                                cfg_SavedWallpapers = [];
+                            }
+                            ToolTip.text: i18n("Remove all saved wallpapers")
+                            ToolTip.visible: hovered
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                    }
+
+                }
+
+                background: Rectangle {
+                    color: "transparent"
+                    border.width: 0
                 }
 
             }
@@ -628,6 +730,13 @@ Item {
 
         }
 
+    }
+
+    // Helper for clipboard operations
+    TextEdit {
+        id: clipboardHelper
+
+        visible: false
     }
 
 }
