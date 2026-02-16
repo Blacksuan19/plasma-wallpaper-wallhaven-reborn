@@ -18,8 +18,6 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.plasmoid
 
 WallpaperItem {
-    // Let the Image's onStatusChanged add it when ready
-
     id: main
 
     property url currentUrl
@@ -35,192 +33,203 @@ WallpaperItem {
     property Item pendingImage
     readonly property string lastValidImagePath: main.configuration.lastValidImagePath || ""
     readonly property string userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    property bool isLoading: false // Consolidated loading flag
+    property bool isLoading: false
     property string lastLoadedUrl: ""
-    property int lastFillMode: -1
     readonly property bool systemDarkMode: Kirigami.Theme.textColor.hsvValue > Kirigami.Theme.backgroundColor.hsvValue
     readonly property bool followSystemTheme: main.configuration.FollowSystemTheme
-    readonly property bool useSavedWallpapers: main.configuration.UseSavedWallpapers
-    readonly property var savedWallpapers: main.configuration.SavedWallpapers
-    readonly property bool fallbackToWallhaven: main.configuration.FallbackToWallhaven
 
     function log(msg) {
         console.log(`Wallhaven Wallpaper: ${msg}`);
     }
 
+    function isHttpUrl(url) {
+        return url.toString().startsWith("http");
+    }
+
+    function loadFallbackImage() {
+        if (lastValidImagePath !== "") {
+            log("Using last valid cached image");
+            main.currentUrl = lastValidImagePath;
+        } else {
+            main.currentUrl = "blackscreen.jpg";
+        }
+        loadImage();
+    }
+
+    function fetchFromWallhaven(reason) {
+        log("Fetching from Wallhaven: " + reason);
+        if (main.configuration.RefreshNotification)
+            showNotification("Wallhaven Wallpaper", reason, "plugin-wallpaper");
+
+        main.configuration.ShownSavedWallpapers = [];
+        wallpaper.configuration.writeConfig();
+        getImageData(main.retryRequestCount).then((data) => {
+            pickImage(data);
+        }).catch((e) => {
+            log("getImageData Error: " + e);
+            showNotification("Wallhaven Wallpaper Error", "Failed to fetch: " + e, "dialog-error", true);
+            isLoading = false;
+        });
+    }
+
+    function showNotification(title, text, iconName, isError) {
+        const isErrorNotif = isError === true;
+        if (isErrorNotif && !main.configuration.ErrorNotification)
+            return ;
+
+        if (!isErrorNotif && !main.configuration.RefreshNotification)
+            return ;
+
+        const note = notificationComponent.createObject(root, {
+            "title": title,
+            "text": text,
+            "iconName": iconName
+        });
+        note.sendEvent();
+    }
+
     function saveCurrentWallpaper() {
         if (!main.currentUrl || main.currentUrl.toString() === "" || main.currentUrl.toString() === "blackscreen.jpg") {
-            sendFailureNotification("No valid wallpaper to save");
+            showNotification("Wallhaven Wallpaper Error", "No valid wallpaper to save", "dialog-error", true);
             return ;
         }
         const urlString = main.currentUrl.toString();
-        // Check if URL is already saved
+        const thumbnailString = main.configuration.currentWallpaperThumbnail || "";
+        // Store as "fullUrl|||thumbnailUrl" for fast preview loading
+        const savedEntry = urlString + "|||" + thumbnailString;
         let currentList = main.configuration.SavedWallpapers || [];
-        if (currentList.indexOf(urlString) !== -1) {
-            sendFailureNotification("Wallpaper already saved");
+        // Check if already saved (check both old format and new format)
+        const alreadySaved = currentList.some((entry) => {
+            return entry === urlString || entry.startsWith(urlString + "|||");
+        });
+        if (alreadySaved) {
+            showNotification("Wallhaven Wallpaper Error", "Wallpaper already saved", "dialog-error", true);
             return ;
         }
-        // Create a new array to trigger configuration save
         let newList = currentList.slice();
-        newList.push(urlString);
+        newList.push(savedEntry);
         main.configuration.SavedWallpapers = newList;
+        wallpaper.configuration.writeConfig();
         log("Saved wallpaper: " + urlString);
-        if (main.configuration.RefreshNotification) {
-            var note = refreshNotification.createObject(root);
-            note.text = "Wallpaper saved! Total saved: " + newList.length;
-            note.sendEvent();
-        }
+        showNotification("Wallhaven Wallpaper", "Wallpaper saved! Total: " + newList.length, "plugin-wallpaper", false);
     }
 
     function loadFromSavedWallpapers() {
         const savedList = main.configuration.SavedWallpapers || [];
         if (savedList.length === 0) {
-            sendFailureNotification("No saved wallpapers found. Add some using 'Save Wallpaper' context menu.");
-            isLoading = false;
+            showNotification("Wallhaven Wallpaper", "No saved wallpapers found. Fetching from Wallhaven...", "plugin-wallpaper", false);
+            getImageData(main.retryRequestCount).then((data) => {
+                pickImage(data);
+            }).catch((e) => {
+                log("getImageData Error: " + e);
+                showNotification("Wallhaven Wallpaper Error", "Failed to fetch: " + e, "dialog-error", true);
+                loadFallbackImage();
+                isLoading = false;
+            });
             return ;
         }
-        // Get list of already shown wallpapers
         let shownList = main.configuration.ShownSavedWallpapers || [];
-        // Check if we've shown all wallpapers
         if (shownList.length >= savedList.length) {
-            log("All saved wallpapers have been shown in this cycle (" + savedList.length + " total)");
-            // If fallback is enabled, fetch from Wallhaven
-            if (fallbackToWallhaven) {
-                log("Fallback to Wallhaven enabled - fetching new wallpaper");
-                if (main.configuration.RefreshNotification) {
-                    var note = refreshNotification.createObject(root);
-                    note.text = "All saved wallpapers shown. Fetching from Wallhaven...";
-                    note.sendEvent();
-                }
-                // Reset shown list for next cycle
-                main.configuration.ShownSavedWallpapers = [];
-                // Fetch from Wallhaven
-                getImageData(main.retryRequestCount).then((data) => {
-                    pickImage(data);
-                }).catch((e) => {
-                    log("getImageData Error:" + e);
-                    sendFailureNotification("Failed to fetch from Wallhaven: " + e);
-                    isLoading = false;
-                });
-                return ;
-            } else {
-                // No fallback - notify user and reset
-                sendFailureNotification("All " + savedList.length + " saved wallpapers have been shown. Enable 'Fallback to Wallhaven' or add more wallpapers.");
-                // Reset for next cycle
-                main.configuration.ShownSavedWallpapers = [];
-                isLoading = false;
-                return ;
-            }
-        }
-        // Find wallpapers that haven't been shown yet
-        let unshownWallpapers = [];
-        for (let i = 0; i < savedList.length; i++) {
-            if (shownList.indexOf(savedList[i]) === -1)
-                unshownWallpapers.push(savedList[i]);
+            // Continue execution to pick from saved list
 
+            if (main.configuration.CycleSavedWallpapers) {
+                // Cycle is enabled: reset and continue with saved wallpapers
+                showNotification("Wallhaven Wallpaper", "Restarting saved wallpapers cycle", "plugin-wallpaper", false);
+                main.configuration.ShownSavedWallpapers = [];
+                wallpaper.configuration.writeConfig();
+                shownList = [];
+            } else {
+                // Cycling disabled: fetch new from Wallhaven
+                fetchFromWallhaven("All " + savedList.length + " saved wallpapers shown. Fetching new from Wallhaven...");
+                return ;
+            }
         }
-        // Prefer wallpapers different from the currently loaded one
-        let availableWallpapers = unshownWallpapers.filter((url) => {
-            return url !== lastLoadedUrl;
+        // Find unshown wallpapers
+        let unshownWallpapers = savedList.filter((entry) => {
+            return shownList.indexOf(entry) === -1;
         });
-        // If no unshown wallpapers available (except current), pick from all saved wallpapers
+        let availableWallpapers = unshownWallpapers.filter((entry) => {
+            // Parse entry to get full URL (backward compatible)
+            const fullUrl = entry.includes("|||") ? entry.split("|||")[0] : entry;
+            return fullUrl !== lastLoadedUrl;
+        });
+        // If no available wallpapers, try from all except current
         if (availableWallpapers.length === 0) {
-            // Try to pick from any saved wallpaper that isn't the current one
-            availableWallpapers = savedList.filter((url) => {
-                return url !== lastLoadedUrl;
+            availableWallpapers = savedList.filter((entry) => {
+                const fullUrl = entry.includes("|||") ? entry.split("|||")[0] : entry;
+                return fullUrl !== lastLoadedUrl;
             });
-            // If still no options (only 1 wallpaper in total), handle exhaustion case
+            // Only one wallpaper exists
             if (availableWallpapers.length === 0) {
-                log("Only one saved wallpaper exists");
-                // Reset and try to fetch from Wallhaven if enabled
-                if (fallbackToWallhaven) {
-                    log("Fallback to Wallhaven enabled - fetching new wallpaper");
-                    if (main.configuration.RefreshNotification) {
-                        var note = refreshNotification.createObject(root);
-                        note.text = "Only one saved wallpaper. Fetching from Wallhaven...";
-                        note.sendEvent();
-                    }
-                    main.configuration.ShownSavedWallpapers = [];
-                    getImageData(main.retryRequestCount).then((data) => {
-                        pickImage(data);
-                    }).catch((e) => {
-                        log("getImageData Error:" + e);
-                        sendFailureNotification("Failed to fetch from Wallhaven: " + e);
-                        isLoading = false;
-                    });
-                    return ;
+                if (main.configuration.CycleSavedWallpapers) {
+                    // Just use the one wallpaper again
+                    showNotification("Wallhaven Wallpaper", "Only one saved wallpaper available", "plugin-wallpaper", false);
                 } else {
-                    sendFailureNotification("Only one saved wallpaper. Add more or enable 'Fallback to Wallhaven'.");
-                    isLoading = false;
+                    // Fetch new from Wallhaven
+                    fetchFromWallhaven("Only one saved wallpaper. Fetching new from Wallhaven...");
                     return ;
                 }
             }
-            // We're picking from already shown wallpapers, so reset the shown list
-            log("All wallpapers shown, restarting cycle with different wallpaper");
             shownList = [];
         }
-        // Pick a random wallpaper from available options
-        const randomIndex = Math.floor(Math.random() * availableWallpapers.length);
-        const selectedUrl = availableWallpapers[randomIndex];
-        // Mark as shown - create new array to trigger configuration save
-        let newShownList = shownList.slice();
-        newShownList.push(selectedUrl);
-        main.configuration.ShownSavedWallpapers = newShownList;
-        log("Loading saved wallpaper (" + newShownList.length + "/" + savedList.length + "): " + selectedUrl);
-        // Show notification
-        if (main.configuration.RefreshNotification) {
-            var note = refreshNotification.createObject(root);
-            note.text = "Loading saved wallpaper " + newShownList.length + " of " + savedList.length;
-            note.sendEvent();
+        // Select wallpaper (random or sequential based on shuffle setting)
+        let selectedEntry;
+        if (main.configuration.ShuffleSavedWallpapers) {
+            // Random selection
+            const randomIndex = Math.floor(Math.random() * availableWallpapers.length);
+            selectedEntry = availableWallpapers[randomIndex];
+        } else {
+            // Sequential selection - use the first unshown wallpaper
+            selectedEntry = availableWallpapers[0];
         }
+        // Parse entry: "fullUrl|||thumbnailUrl" or just "fullUrl" (old format)
+        const parts = selectedEntry.split("|||");
+        const selectedUrl = parts[0];
+        const thumbnailUrl = parts.length > 1 ? parts[1] : selectedUrl; // Fallback to full URL for old entries
+        let newShownList = shownList.slice();
+        newShownList.push(selectedEntry);
+        main.configuration.ShownSavedWallpapers = newShownList;
+        showNotification("Wallhaven Wallpaper", "Loading saved wallpaper " + newShownList.length + " of " + savedList.length, "plugin-wallpaper", false);
         main.currentUrl = selectedUrl;
         main.configuration.lastValidImagePath = selectedUrl;
+        main.configuration.currentWallpaperThumbnail = thumbnailUrl;
+        wallpaper.configuration.writeConfig();
         loadImage();
         isLoading = false;
     }
 
     function refreshImage() {
-        // Don't refresh if already loading
         if (isLoading) {
-            log("Loading in progress - skipping refresh request");
+            log("Loading in progress - skipping refresh");
             return ;
         }
         isLoading = true;
-        // Check if we should use saved wallpapers instead of fetching from API
-        if (useSavedWallpapers) {
-            log("Using saved wallpapers mode");
+        if (main.configuration.UseSavedWallpapers) {
             loadFromSavedWallpapers();
             return ;
         }
         getImageData(main.retryRequestCount).then((data) => {
             pickImage(data);
         }).catch((e) => {
-            log("getImageData Error:" + e);
-            sendFailureNotification("Failed to fetch a new wallpaper: " + e);
-            // Try to use the last valid cached image if available
-            if (lastValidImagePath !== "" && isFileExists(lastValidImagePath)) {
-                log("Using last valid cached image: " + lastValidImagePath);
-                main.currentUrl = "file://" + lastValidImagePath;
-            } else {
-                main.currentUrl = "blackscreen.jpg";
-            }
-            loadImage();
+            log("getImageData Error: " + e);
+            showNotification("Wallhaven Wallpaper Error", "Failed to fetch: " + e, "dialog-error", true);
+            loadFallbackImage();
             isLoading = false;
         });
     }
 
     function handleRequestError(retries, errorText, resolve, reject) {
         if (retries > 0) {
-            let msg = `Request failed, retrying in ${main.retryRequestDelay} seconds...`;
+            let msg = `Retrying in ${main.retryRequestDelay} seconds...`;
             log(msg);
-            sendFailureNotification(msg);
+            showNotification("Wallhaven Wallpaper Error", msg, "dialog-error", true);
             retryTimer.retries = retries;
             retryTimer.resolve = resolve;
             retryTimer.reject = reject;
             retryTimer.start();
         } else {
-            let msg = "Request failed, no more retries left" + (errorText ? ": " + errorText : "");
-            sendFailureNotification(msg);
+            let msg = "Request failed" + (errorText ? ": " + errorText : "");
+            showNotification("Wallhaven Wallpaper Error", msg, "dialog-error", true);
             reject(msg);
         }
     }
@@ -228,17 +237,8 @@ WallpaperItem {
     function getImageData(retries) {
         return new Promise((res, rej) => {
             var url = `https://wallhaven.cc/api/v1/search?`;
-            // Build URL parameters
-            url += buildBinaryParameter("categories", {
-                "CategoryGeneral": true,
-                "CategoryAnime": true,
-                "CategoryPeople": true
-            }) + "&";
-            url += buildBinaryParameter("purity", {
-                "PuritySFW": true,
-                "PuritySketchy": true,
-                "PurityNSFW": true
-            }) + "&";
+            url += buildBinaryParameter("categories", ["CategoryGeneral", "CategoryAnime", "CategoryPeople"]) + "&";
+            url += buildBinaryParameter("purity", ["PuritySFW", "PuritySketchy", "PurityNSFW"]) + "&";
             // sorting
             url += `sorting=${main.configuration.Sorting}&`;
             if (main.configuration.Sorting != "random")
@@ -267,8 +267,8 @@ WallpaperItem {
                         let data = JSON.parse(xhr.responseText);
                         res(data);
                     } catch (e) {
-                        let msg = "cannot parse response as JSON: " + xhr.responseText;
-                        sendFailureNotification(msg);
+                        let msg = "Invalid JSON response: " + xhr.responseText;
+                        showNotification("Wallhaven Wallpaper Error", msg, "dialog-error", true);
                         rej(msg);
                     }
                 }
@@ -284,29 +284,27 @@ WallpaperItem {
         });
     }
 
-    // Helper function to build binary parameters like categories and purity
     function buildBinaryParameter(paramName, configKeys) {
         let result = "";
-        for (const key of Object.keys(configKeys)) {
-            result += main.configuration[key] ? "1" : "0";
+        for (let i = 0; i < configKeys.length; i++) {
+            result += main.configuration[configKeys[i]] ? "1" : "0";
         }
         return `${paramName}=${result}`;
     }
 
-    // Helper function to build ratio parameter
     function buildRatioParameter() {
-        if (wallpaper.configuration.RatioAny)
+        if (main.configuration.RatioAny)
             return "";
 
         var ratios = [];
-        if (wallpaper.configuration.Ratio169)
+        if (main.configuration.Ratio169)
             ratios.push("16x9");
 
-        if (wallpaper.configuration.Ratio1610)
+        if (main.configuration.Ratio1610)
             ratios.push("16x10");
 
-        if (wallpaper.configuration.RatioCustom)
-            ratios.push(wallpaper.configuration.RatioCustomValue);
+        if (main.configuration.RatioCustom)
+            ratios.push(main.configuration.RatioCustomValue);
 
         return ratios.length > 0 ? `ratios=${ratios.join(',')}&` : "";
     }
@@ -323,31 +321,11 @@ WallpaperItem {
 
         main.currentSearchTermIndex = term_index;
         let final_q = qs[term_index].trim();
-        // Only add tag if setting is ON and system is DARK
         if (main.configuration.FollowSystemTheme && systemDarkMode)
             final_q = (final_q ? final_q + "" : "") + "+dark";
 
-        log("transformed query: " + final_q);
-        sendRefreshNotification(final_q);
+        showNotification("Wallhaven Wallpaper", "Fetching wallpaper: " + final_q, "plugin-wallpaper", false);
         return `q=${encodeURIComponent(final_q)}`;
-    }
-
-    function sendRefreshNotification(query) {
-        if (!main.configuration.RefreshNotification)
-            return ;
-
-        var note = refreshNotification.createObject(root);
-        note.text = "Fetching a new wallpaper with search term " + query;
-        note.sendEvent();
-    }
-
-    function sendFailureNotification(msg) {
-        if (!main.configuration.ErrorNotification)
-            return ;
-
-        var note = failureNotification.createObject(root);
-        note.text = msg;
-        note.sendEvent();
     }
 
     function pickImage(d) {
@@ -374,63 +352,38 @@ WallpaperItem {
             const remoteUrl = imageObj.path;
             main.currentPage = d.meta.current_page;
             main.configuration.currentWallpaperThumbnail = imageObj.thumbs.small;
-            downloadImageToCache(remoteUrl);
+            wallpaper.configuration.writeConfig();
+            setWallpaperUrl(remoteUrl);
         } else {
-            let msg = "No images found for given query " + d.meta.query + " with the current settings";
-            sendFailureNotification(msg);
+            let msg = "No images found for query: " + d.meta.query;
+            showNotification("Wallhaven Wallpaper Error", msg, "dialog-error", true);
             log(msg);
             main.configuration.currentWallpaperThumbnail = "";
-            // Try to use the last valid cached image if available
-            if (lastValidImagePath !== "" && isFileExists(lastValidImagePath)) {
-                log("Using last valid cached image: " + lastValidImagePath);
-                main.currentUrl = "file://" + lastValidImagePath;
-            } else {
-                main.currentUrl = "blackscreen.jpg";
-            }
-            loadImage();
-            isLoading = false; // Make sure to reset loading state
+            wallpaper.configuration.writeConfig();
+            loadFallbackImage();
+            isLoading = false;
         }
     }
 
-    function downloadImageToCache(remoteUrl) {
-        if (remoteUrl === lastLoadedUrl) {
-            log("URL already loaded, skipping: " + remoteUrl);
+    function setWallpaperUrl(url) {
+        if (url === lastLoadedUrl) {
+            log("Already loaded, skipping");
             isLoading = false;
             return ;
         }
-        log("Loading image from: " + remoteUrl);
-        main.currentUrl = remoteUrl;
-        main.configuration.lastValidImagePath = remoteUrl;
-    }
-
-    function isFileExists(filePath) {
-        // For URLs, assume they exist
-        if (filePath.toString().startsWith("http"))
-            return true;
-
-        try {
-            const cleanPath = filePath.replace(/^file:\/\//, '');
-            if (!cleanPath)
-                return false;
-
-            const xhr = new XMLHttpRequest();
-            xhr.open("GET", "exec:[ -s \"" + cleanPath + "\" ] && echo \"yes\" || echo \"no\"", false);
-            xhr.send();
-            return xhr.responseText.trim() === "yes";
-        } catch (e) {
-            return false;
-        }
+        main.currentUrl = url;
+        main.configuration.lastValidImagePath = url;
+        wallpaper.configuration.writeConfig();
     }
 
     function loadImage() {
         try {
-            // Skip if URL hasn't changed and we already have an image
             if (main.currentUrl.toString() === lastLoadedUrl && main.pendingImage) {
-                log("Skipping duplicate load of: " + main.currentUrl);
+                log("Skipping duplicate load");
                 isLoading = false;
                 return ;
             }
-            log("Loading image with URL: " + main.currentUrl.toString());
+            log("Loading: " + main.currentUrl.toString());
             lastLoadedUrl = main.currentUrl.toString();
             main.pendingImage = mainImage.createObject(root, {
                 "source": main.currentUrl,
@@ -455,15 +408,8 @@ WallpaperItem {
     Component.onCompleted: {
         refreshImage();
     }
-    onCurrentUrlChanged: {
-        loadImage();
-    }
-    onFillModeChanged: {
-        if (lastFillMode !== fillMode) {
-            lastFillMode = fillMode;
-            loadImage();
-        }
-    }
+    onCurrentUrlChanged: loadImage()
+    onFillModeChanged: loadImage()
     onRefreshSignalChanged: refreshTimer.restart()
     onSortingChanged: {
         if (sorting != "random") {
@@ -473,13 +419,11 @@ WallpaperItem {
     }
     onSystemDarkModeChanged: {
         if (followSystemTheme) {
-            log("System theme changed. Dark Mode: " + systemDarkMode);
+            log("System theme changed");
             refreshTimer.restart();
         }
     }
-    onFollowSystemThemeChanged: {
-        refreshTimer.restart();
-    }
+    onFollowSystemThemeChanged: refreshTimer.restart()
     contextualActions: [
         PlasmaCore.Action {
             text: i18n("Open Wallpaper URL")
@@ -525,29 +469,11 @@ WallpaperItem {
     }
 
     Component {
-        id: refreshNotification
+        id: notificationComponent
 
         Notification {
             componentName: "plasma_workspace"
             eventId: "notification"
-            title: "Wallhaven Wallpaper"
-            text: "Fetching a new wallpaper with search term "
-            iconName: "plugin-wallpaper"
-            urgency: Notification.HighUrgency
-            autoDelete: true
-        }
-
-    }
-
-    Component {
-        id: failureNotification
-
-        Notification {
-            componentName: "plasma_workspace"
-            eventId: "notification"
-            title: "Wallhaven Wallpaper Error"
-            text: "Failed to fetch a new wallpaper"
-            iconName: "dialog-error"
             urgency: Notification.HighUrgency
             autoDelete: true
         }
@@ -571,35 +497,27 @@ WallpaperItem {
                 smooth: true
                 onStatusChanged: {
                     if (status === Image.Error) {
-                        log("Error loading image: " + source);
-                        sendFailureNotification("Failed to load image. This may be a network error. Try refreshing or restart Plasma shell if issue persists.");
-                        // On error, destroy pending image and keep old wallpaper visible
+                        log("Error loading image");
+                        showNotification("Wallhaven Wallpaper Error", "Failed to load image. Try refreshing or restart Plasma shell.", "dialog-error", true);
                         if (imageItem === main.pendingImage) {
                             main.pendingImage = null;
                             imageItem.destroy();
                         }
                         isLoading = false;
                     } else if (status === Image.Ready) {
-                        log("Image loaded successfully: " + source);
-                        if (source.toString().startsWith("http"))
+                        log("Image loaded successfully");
+                        if (isHttpUrl(source)) {
                             main.configuration.lastValidImagePath = source.toString();
-
-                        // Add to stack now that image is loaded
-                        if (imageItem === main.pendingImage) {
-                            // Only add if not already in stack (check current item)
-                            if (root.currentItem !== imageItem) {
-                                log("Image ready, adding to stack");
-                                // Use push for initial load (empty stack), replace for subsequent loads
-                                if (root.depth === 0)
-                                    root.push(imageItem);
-                                else
-                                    root.replace(imageItem);
-                            }
+                            wallpaper.configuration.writeConfig();
+                        }
+                        if (imageItem === main.pendingImage && root.currentItem !== imageItem) {
+                            if (root.depth === 0)
+                                root.push(imageItem);
+                            else
+                                root.replace(imageItem);
                         }
                         main.accentColorChanged();
                         isLoading = false;
-                    } else if (status === Image.Loading) {
-                        log("Image loading in progress: " + source);
                     }
                 }
                 QQC2.StackView.onDeactivated: destroy()

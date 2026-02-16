@@ -57,7 +57,8 @@ Item {
     property bool cfg_ErrorNotification
     property bool cfg_FollowSystemTheme
     property bool cfg_UseSavedWallpapers
-    property bool cfg_FallbackToWallhaven
+    property bool cfg_CycleSavedWallpapers
+    property bool cfg_ShuffleSavedWallpapers
     property var cfg_SavedWallpapers
     property bool cfg_RatioAny
     property bool cfg_Ratio169
@@ -221,13 +222,24 @@ Item {
                     }
 
                     CheckBox {
-                        id: fallbackToWallhavenCheckbox
+                        id: cycleSavedWallpapersCheckbox
 
-                        text: i18n("Fetch from Wallhaven when all saved wallpapers are shown")
-                        checked: cfg_FallbackToWallhaven
+                        text: i18n("Loop through saved wallpapers")
+                        checked: cfg_CycleSavedWallpapers
                         enabled: cfg_UseSavedWallpapers
-                        onToggled: cfg_FallbackToWallhaven = checked
-                        ToolTip.text: i18n("When all saved wallpapers have been shown once, fetch a new one from Wallhaven and restart the cycle")
+                        onToggled: cfg_CycleSavedWallpapers = checked
+                        ToolTip.text: i18n("When all saved wallpapers have been shown, restart from the beginning. If disabled, fetch new wallpapers from Wallhaven instead.")
+                        ToolTip.visible: hovered
+                    }
+
+                    CheckBox {
+                        id: shuffleSavedWallpapersCheckbox
+
+                        text: i18n("Shuffle saved wallpapers")
+                        checked: cfg_ShuffleSavedWallpapers
+                        enabled: cfg_UseSavedWallpapers
+                        onToggled: cfg_ShuffleSavedWallpapers = checked
+                        ToolTip.text: i18n("Show saved wallpapers in random order. If disabled, they will display in the order they were saved.")
                         ToolTip.visible: hovered
                     }
 
@@ -260,7 +272,11 @@ Item {
                             icon.name: "edit-copy"
                             enabled: !!(cfg_SavedWallpapers && cfg_SavedWallpapers.length > 0)
                             onClicked: {
-                                const urls = cfg_SavedWallpapers.join("\n");
+                                // Extract only full URLs, removing thumbnail URLs from saved entries
+                                const fullUrls = cfg_SavedWallpapers.map((entry) => {
+                                    return entry.includes("|||") ? entry.split("|||")[0] : entry;
+                                });
+                                const urls = fullUrls.join("\n");
                                 clipboardHelper.text = urls;
                                 clipboardHelper.selectAll();
                                 clipboardHelper.copy();

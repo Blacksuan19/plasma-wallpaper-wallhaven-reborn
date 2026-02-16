@@ -136,8 +136,12 @@
       <label>Use only saved wallpapers instead of fetching from Wallhaven</label>
       <default>false</default>
     </entry>
-    <entry name="FallbackToWallhaven" type="bool">
-      <label>Fetch from Wallhaven when saved wallpapers are exhausted</label>
+    <entry name="CycleSavedWallpapers" type="bool">
+      <label>Loop through saved wallpapers when all have been shown</label>
+      <default>true</default>
+    </entry>
+    <entry name="ShuffleSavedWallpapers" type="bool">
+      <label>Shuffle saved wallpapers instead of showing them in order</label>
       <default>true</default>
     </entry>
     <entry name="ShownSavedWallpapers" type="StringList">
