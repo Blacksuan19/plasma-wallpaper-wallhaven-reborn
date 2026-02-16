@@ -82,10 +82,9 @@ for fast preview loading in settings.
 
 - the plugin cannot be set as lock screen wallpaper.
   ([networking related](https://bugs.kde.org/show_bug.cgi?id=483094))
-- current wallpaper is not shown in the plugin settings page the first time the
-  plugin is set as wallpaper.
-- scrollbar does not show up again when window is resized to a smaller size
-  after being resized to a larger size.
+- the thumbnail in the wallpaper KCM does not change when the wallpaper changes,
+  and always shows the first fetched wallpaper. Plasma issue because the KCM
+  thumbnail is static by design and cannot be updated dynamically.
 
 ## Installation
 
