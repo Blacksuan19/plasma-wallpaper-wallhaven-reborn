@@ -32,10 +32,10 @@ import "utils.js" as Utils
 Item {
     id: root
 
-    // Accept the property plasmashell passes in when creating the config UI
+    // Accept the property systemsettings/plasmashell injects for KCMs.
     property var configDialog
     // Properties
-    property var wallpaperConfiguration: wallpaper.configuration
+    property var wallpaperConfiguration
     property alias cfg_Color: colorButton.color
     property alias cfg_Blur: blurRadioButton.checked
     property alias cfg_APIKey: apiKeyInput.text
@@ -59,6 +59,8 @@ Item {
     property bool cfg_RefreshNotification
     property bool cfg_ErrorNotification
     property bool cfg_FollowSystemTheme
+    property bool cfg_RefetchSignal
+    property string cfg_currentWallpaperThumbnail
     property bool cfg_UseSavedWallpapers
     property bool cfg_CycleSavedWallpapers
     property bool cfg_ShuffleSavedWallpapers
@@ -69,9 +71,19 @@ Item {
     property bool cfg_RatioCustom
     property string cfg_RatioCustomValue
     readonly property string savedWallpapersDir: Utils.normalizePath(Platform.StandardPaths.writableLocation(Platform.StandardPaths.AppDataLocation)) + "/wallhaven-saved"
+    readonly property string currentThumbnailSource: (wallpaperConfiguration && wallpaperConfiguration.currentWallpaperThumbnail) ? wallpaperConfiguration.currentWallpaperThumbnail : cfg_currentWallpaperThumbnail
 
     function refreshImage() {
-        wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+        cfg_RefetchSignal = !cfg_RefetchSignal;
+        if (wallpaperConfiguration)
+            wallpaperConfiguration.RefetchSignal = cfg_RefetchSignal;
+
+        if (configDialog && "needsSave" in configDialog)
+            configDialog.needsSave = true;
+
+        if (configDialog && typeof configDialog.save === "function")
+            configDialog.save();
+
     }
 
     function openSavedWallpapersFolder() {
@@ -104,6 +116,19 @@ Item {
 
     implicitWidth: parent.width
     implicitHeight: parent.height
+    Component.onCompleted: {
+        if (!wallpaperConfiguration) {
+            if (configDialog && configDialog.configuration)
+                wallpaperConfiguration = configDialog.configuration;
+            else if (typeof wallpaper !== "undefined" && wallpaper && wallpaper.configuration)
+                wallpaperConfiguration = wallpaper.configuration;
+        }
+    }
+    onConfigDialogChanged: {
+        if (!wallpaperConfiguration && configDialog && configDialog.configuration)
+            wallpaperConfiguration = configDialog.configuration;
+
+    }
 
     ScrollView {
         id: scrollView
@@ -127,7 +152,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.topMargin: Kirigami.Units.largeSpacing
                 Layout.bottomMargin: Kirigami.Units.largeSpacing
-                visible: wallpaperConfiguration.currentWallpaperThumbnail !== ""
+                visible: currentThumbnailSource !== ""
 
                 Kirigami.ShadowedRectangle {
                     id: imageContainer
@@ -149,7 +174,7 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 5
                         fillMode: Image.PreserveAspectCrop
-                        source: wallpaperConfiguration.currentWallpaperThumbnail
+                        source: currentThumbnailSource
                         asynchronous: true
                         cache: true
                         smooth: true
@@ -165,7 +190,8 @@ Item {
 
                 function setMethod() {
                     for (var i = 0; i < model.length; i++) {
-                        if (model[i]["fillMode"] === wallpaperConfiguration.FillMode) {
+                        const fillModeValue = wallpaperConfiguration ? wallpaperConfiguration.FillMode : cfg_FillMode;
+                        if (model[i]["fillMode"] === fillModeValue) {
                             resizeComboBox.currentIndex = i;
                             var tl = model[i]["label"].length;
                         }
@@ -739,7 +765,9 @@ Item {
                         ToolTip.visible: hovered
                         onToggled: {
                             cfg_RefreshNotification = checked;
-                            wallpaperConfiguration.refreshNotification = checked;
+                            if (wallpaperConfiguration)
+                                wallpaperConfiguration.refreshNotification = checked;
+
                         }
                     }
 
@@ -750,7 +778,9 @@ Item {
                         ToolTip.visible: hovered
                         onToggled: {
                             cfg_ErrorNotification = checked;
-                            wallpaperConfiguration.errorNotification = checked;
+                            if (wallpaperConfiguration)
+                                wallpaperConfiguration.errorNotification = checked;
+
                         }
                     }
 

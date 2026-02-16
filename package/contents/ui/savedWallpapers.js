@@ -22,50 +22,101 @@ function loadFromSavedWallpapers(ctx) {
         return;
     }
 
-    let shownList = config.ShownSavedWallpapers || [];
+    let shownList = ctx.getShownList();
     if (shownList.length >= savedList.length) {
         if (config.CycleSavedWallpapers) {
             ctx.notify("Wallhaven Wallpaper", "Restarting saved wallpapers cycle", "plugin-wallpaper", false);
-            config.ShownSavedWallpapers = [];
-            ctx.writeConfig();
+            ctx.setShownList([]);
             shownList = [];
         } else {
+            ctx.setShownList([]);
             ctx.fetchFromWallhaven("All " + savedList.length + " saved wallpapers shown. Fetching new from Wallhaven...");
             return;
         }
     }
 
-    let unshownWallpapers = savedList.filter((entry) => {
-        return shownList.indexOf(entry) === -1;
-    });
-    let availableWallpapers = unshownWallpapers.filter((entry) => {
+    const lastLoadedUrl = ctx.state.lastLoadedUrl || "";
+    const lastLoadedPath = ctx.utils.normalizePath(lastLoadedUrl);
+    const isCurrentEntry = (entry) => {
         const parsed = ctx.utils.parseSavedEntry(entry);
-        return parsed.fullUrl !== ctx.state.lastLoadedUrl;
+        if (ctx.utils.isHttpUrl(lastLoadedUrl))
+            return parsed.fullUrl === lastLoadedUrl;
+        if (lastLoadedPath && parsed.localPath)
+            return parsed.localPath === lastLoadedPath;
+        return parsed.fullUrl === lastLoadedUrl;
+    };
+    const isShownEntry = (entry) => {
+        return shownList.indexOf(entry) !== -1;
+    };
+
+    let unshownWallpapers = savedList.filter((entry) => {
+        return !isShownEntry(entry);
     });
 
-    if (availableWallpapers.length === 0) {
-        availableWallpapers = savedList.filter((entry) => {
-            const parsed = ctx.utils.parseSavedEntry(entry);
-            return parsed.fullUrl !== ctx.state.lastLoadedUrl;
+    if (!config.CycleSavedWallpapers && unshownWallpapers.length === 0) {
+        ctx.setShownList([]);
+        ctx.fetchFromWallhaven("All " + savedList.length + " saved wallpapers shown. Fetching new from Wallhaven...");
+        return;
+    }
+
+    const pickNextSequential = () => {
+        const currentIndex = savedList.findIndex((entry) => {
+            return isCurrentEntry(entry);
+        });
+        const startIndex = currentIndex >= 0 ? currentIndex : -1;
+        for (let offset = 1; offset <= savedList.length; offset++) {
+            const idx = (startIndex + offset) % savedList.length;
+            const entry = savedList[idx];
+            if (isCurrentEntry(entry))
+                continue;
+            if (unshownWallpapers.length > 0 && !isShownEntry(entry))
+                return entry;
+            if (unshownWallpapers.length === 0)
+                return entry;
+        }
+        return "";
+    };
+
+    let selectedEntry = "";
+    if (config.ShuffleSavedWallpapers) {
+        let availableWallpapers = unshownWallpapers.filter((entry) => {
+            return !isCurrentEntry(entry);
         });
         if (availableWallpapers.length === 0) {
             if (config.CycleSavedWallpapers) {
                 ctx.notify("Wallhaven Wallpaper", "Only one saved wallpaper available", "plugin-wallpaper", false);
-                availableWallpapers = savedList.slice();
+                availableWallpapers = savedList.filter((entry) => {
+                    return !isCurrentEntry(entry);
+                });
+                if (availableWallpapers.length === 0)
+                    availableWallpapers = savedList.slice();
+                ctx.setShownList([]);
+                shownList = [];
             } else {
                 ctx.fetchFromWallhaven("Only one saved wallpaper. Fetching new from Wallhaven...");
                 return;
             }
         }
-        shownList = [];
-    }
-
-    let selectedEntry;
-    if (config.ShuffleSavedWallpapers) {
         const randomIndex = Math.floor(Math.random() * availableWallpapers.length);
         selectedEntry = availableWallpapers[randomIndex];
     } else {
-        selectedEntry = availableWallpapers[0];
+        selectedEntry = pickNextSequential();
+        if (!selectedEntry) {
+            if (config.CycleSavedWallpapers) {
+                ctx.setShownList([]);
+                shownList = [];
+                unshownWallpapers = savedList.slice();
+                selectedEntry = pickNextSequential();
+                if (!selectedEntry) {
+                    ctx.notify("Wallhaven Wallpaper", "Only one saved wallpaper available", "plugin-wallpaper", false);
+                    selectedEntry = savedList[0];
+                }
+            } else {
+                ctx.setShownList([]);
+                ctx.fetchFromWallhaven("All " + savedList.length + " saved wallpapers shown. Fetching new from Wallhaven...");
+                return;
+            }
+        }
     }
 
     const parsed = ctx.utils.parseSavedEntry(selectedEntry);
@@ -74,9 +125,10 @@ function loadFromSavedWallpapers(ctx) {
 
     let newShownList = shownList.slice();
     newShownList.push(selectedEntry);
-    config.ShownSavedWallpapers = newShownList;
+    ctx.setShownList(newShownList);
     const source = parsed.localPath ? "local" : "online";
-    ctx.notify("Wallhaven Wallpaper", "Loading saved wallpaper " + newShownList.length + " of " + savedList.length + " (" + source + ")", "plugin-wallpaper", false);
+    const selectedIndex = savedList.indexOf(selectedEntry) + 1;
+    ctx.notify("Wallhaven Wallpaper", "Loading saved wallpaper " + selectedIndex + " of " + savedList.length + " (" + source + ")", "plugin-wallpaper", false);
 
     ctx.setCurrentUrl(finalUrl);
     ctx.setLastValidImagePath(finalUrl);

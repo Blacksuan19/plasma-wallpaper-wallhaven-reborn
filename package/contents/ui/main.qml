@@ -44,6 +44,7 @@ WallpaperItem {
     readonly property string savedWallpapersDir: Utils.normalizePath(Platform.StandardPaths.writableLocation(Platform.StandardPaths.AppDataLocation)) + "/wallhaven-saved"
     property var pendingDownloads: ({
     }) // Track pending downloads: {url: {thumbnail, entry}}
+    property var shownSavedWallpapers: main.configuration.ShownSavedWallpapers || []
 
     function log(msg) {
         console.log(`Wallhaven Wallpaper: ${msg}`);
@@ -98,6 +99,14 @@ WallpaperItem {
             },
             "thumbnail": function() {
                 return main.configuration.currentWallpaperThumbnail || "";
+            },
+            "getShownList": function() {
+                return shownSavedWallpapers || [];
+            },
+            "setShownList": function(list) {
+                shownSavedWallpapers = list || [];
+                main.configuration.ShownSavedWallpapers = shownSavedWallpapers;
+                wallpaper.configuration.writeConfig();
             },
             "downloadWallpaper": function(url, thumb) {
                 Downloads.queueDownload(buildDownloadCtx(), url, thumb);
