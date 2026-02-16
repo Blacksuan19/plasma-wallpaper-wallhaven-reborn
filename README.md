@@ -35,13 +35,14 @@ Port of wallhaven wallpaper plugin by
 - retry fetching wallpaper when a network error occurs.
 - follow system color scheme to automatically fetch darker wallpapers in Dark
   Mode.
-- save wallpapers to a personal collection.
-  - right-click context menu to save current wallpaper URL.
-  - use saved wallpapers only mode to cycle through your collection.
+- save wallpapers to a personal collection with offline support.
+  - right-click context menu to save the current wallpaper (downloaded locally).
+  - use saved wallpapers only mode to cycle through your collection offline.
   - choose between looping through saved wallpapers or fetching new ones when
     exhausted.
   - shuffle saved wallpapers for random playback or display in sequential order.
-  - copy all saved wallpaper URLs to clipboard for backup.
+  - open the saved wallpapers folder from settings.
+  - clear all removes both the list and the local files.
   - automatically fetch from Wallhaven when saved list is empty.
 
 ### How to Search
@@ -60,24 +61,22 @@ for more information about the wallhaven API, you can check the
 
 ### Saved Wallpapers
 
-Build a personal collection of your favorite wallpapers:
+Build a personal collection of your favorite wallpapers with true offline use:
 
-1. **Save wallpapers**: Right-click on the desktop → "Save Wallpaper" to add the
-   current wallpaper URL to your collection.
+1. **Save wallpapers**: Right-click on the desktop → "Save Wallpaper" to
+   download and store the current wallpaper locally.
 2. **Use saved wallpapers only**: Enable this option in settings to cycle
-   through your saved wallpapers instead of fetching random ones from Wallhaven.
+   through your saved wallpapers without an internet connection.
 3. **Loop or fetch new**: Choose whether to restart the cycle when all saved
    wallpapers have been shown, or automatically fetch new wallpapers from
    Wallhaven.
 4. **Shuffle or sequential**: Display saved wallpapers in random order, or in
    the order they were saved.
-5. **Manage collection**: Copy all URLs to clipboard for backup, or clear the
-   entire collection with one click.
+5. **Manage collection**: Open the saved wallpapers folder from settings, or
+   clear the entire collection (files included) with one click.
 
-Note: This feature saves wallpaper URLs (not the actual image files), so an
-internet connection is still required to load the images. Saved wallpapers
-persist across plasmashell restarts and include thumbnail URLs for fast preview
-loading in settings.
+Saved wallpapers persist across plasmashell restarts and include thumbnail URLs
+for fast preview loading in settings.
 
 ### Current known issues
 
