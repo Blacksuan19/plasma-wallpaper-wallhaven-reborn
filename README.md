@@ -35,6 +35,14 @@ Port of wallhaven wallpaper plugin by
 - retry fetching wallpaper when a network error occurs.
 - follow system color scheme to automatically fetch darker wallpapers in Dark
   Mode.
+- save wallpapers to a personal collection.
+  - right-click context menu to save current wallpaper URL.
+  - use saved wallpapers only mode to cycle through your collection.
+  - choose between looping through saved wallpapers or fetching new ones when
+    exhausted.
+  - shuffle saved wallpapers for random playback or display in sequential order.
+  - copy all saved wallpaper URLs to clipboard for backup.
+  - automatically fetch from Wallhaven when saved list is empty.
 
 ### How to Search
 
@@ -49,6 +57,27 @@ this means other than tags, you can also filter by:
 
 for more information about the wallhaven API, you can check the
 [official documentation](https://wallhaven.cc/help/api).
+
+### Saved Wallpapers
+
+Build a personal collection of your favorite wallpapers:
+
+1. **Save wallpapers**: Right-click on the desktop → "Save Wallpaper" to add the
+   current wallpaper URL to your collection.
+2. **Use saved wallpapers only**: Enable this option in settings to cycle
+   through your saved wallpapers instead of fetching random ones from Wallhaven.
+3. **Loop or fetch new**: Choose whether to restart the cycle when all saved
+   wallpapers have been shown, or automatically fetch new wallpapers from
+   Wallhaven.
+4. **Shuffle or sequential**: Display saved wallpapers in random order, or in
+   the order they were saved.
+5. **Manage collection**: Copy all URLs to clipboard for backup, or clear the
+   entire collection with one click.
+
+Note: This feature saves wallpaper URLs (not the actual image files), so an
+internet connection is still required to load the images. Saved wallpapers
+persist across plasmashell restarts and include thumbnail URLs for fast preview
+loading in settings.
 
 ### Current known issues
 
