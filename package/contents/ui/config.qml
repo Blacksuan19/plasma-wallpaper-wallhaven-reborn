@@ -20,11 +20,13 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  2.010-1301, USA.
  */
 
+import Qt.labs.platform 1.1 as Platform
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.kquickcontrols 2.0 as KQuickControls
+import org.kde.plasma.plasma5support 2.0 as Plasma5Support
 
 Item {
     id: root
@@ -65,9 +67,46 @@ Item {
     property bool cfg_Ratio1610
     property bool cfg_RatioCustom
     property string cfg_RatioCustomValue
+    readonly property string savedWallpapersDir: normalizePath(Platform.StandardPaths.writableLocation(Platform.StandardPaths.AppDataLocation)) + "/wallhaven-saved"
 
     function refreshImage() {
         wallpaperConfiguration.RefetchSignal = !wallpaperConfiguration.RefetchSignal;
+    }
+
+    function normalizePath(path) {
+        if (!path)
+            return "";
+
+        const text = (typeof path === "string") ? path : path.toString();
+        return text.startsWith("file://") ? text.slice("file://".length) : text;
+    }
+
+    function openSavedWallpapersFolder() {
+        if (!savedWallpapersDir)
+            return ;
+
+        const cmd = `xdg-open "${savedWallpapersDir}"`;
+        execHelper.connectSource(cmd);
+    }
+
+    function deleteSavedFiles(entries) {
+        if (!entries || entries.length === 0)
+            return ;
+
+        const localPaths = entries.map((entry) => {
+            const parts = entry.split("|||");
+            return parts.length > 2 ? normalizePath(parts[2]) : "";
+        }).filter((path) => {
+            return path !== "";
+        });
+        if (localPaths.length === 0)
+            return ;
+
+        const escapedPaths = localPaths.map((path) => {
+            return path.replace(/"/g, "\\\"");
+        });
+        const cmd = `rm -f ${escapedPaths.map((path) => `"${path}"`).join(" ")}`;
+        execHelper.connectSource(cmd);
     }
 
     implicitWidth: parent.width
@@ -268,20 +307,11 @@ Item {
                         Layout.topMargin: Kirigami.Units.smallSpacing
 
                         Button {
-                            text: i18n("Copy URLs")
-                            icon.name: "edit-copy"
-                            enabled: !!(cfg_SavedWallpapers && cfg_SavedWallpapers.length > 0)
-                            onClicked: {
-                                // Extract only full URLs, removing thumbnail URLs from saved entries
-                                const fullUrls = cfg_SavedWallpapers.map((entry) => {
-                                    return entry.includes("|||") ? entry.split("|||")[0] : entry;
-                                });
-                                const urls = fullUrls.join("\n");
-                                clipboardHelper.text = urls;
-                                clipboardHelper.selectAll();
-                                clipboardHelper.copy();
-                            }
-                            ToolTip.text: i18n("Copy all saved wallpaper URLs to clipboard")
+                            text: i18n("Open Folder")
+                            icon.name: "folder-open"
+                            enabled: savedWallpapersDir !== ""
+                            onClicked: openSavedWallpapersFolder()
+                            ToolTip.text: i18n("Open saved wallpapers folder in the file manager")
                             ToolTip.visible: hovered
                         }
 
@@ -290,6 +320,7 @@ Item {
                             icon.name: "edit-clear-all"
                             enabled: !!(cfg_SavedWallpapers && cfg_SavedWallpapers.length > 0)
                             onClicked: {
+                                deleteSavedFiles(cfg_SavedWallpapers || []);
                                 cfg_SavedWallpapers = [];
                             }
                             ToolTip.text: i18n("Remove all saved wallpapers")
@@ -748,11 +779,14 @@ Item {
 
     }
 
-    // Helper for clipboard operations
-    TextEdit {
-        id: clipboardHelper
+    Plasma5Support.DataSource {
+        id: execHelper
 
-        visible: false
+        engine: "executable"
+        connectedSources: []
+        onNewData: function(sourceName, data) {
+            disconnectSource(sourceName);
+        }
     }
 
 }

@@ -20,6 +20,7 @@ import org.kde.plasma.plasmoid
 
 WallpaperItem {
     // Continue execution to pick from saved list
+    // Initial refresh handled by refreshTimer.triggeredOnStart
 
     id: main
 
@@ -485,7 +486,6 @@ WallpaperItem {
 
     anchors.fill: parent
     Component.onCompleted: {
-        refreshImage();
     }
     onCurrentUrlChanged: loadImage()
     onFillModeChanged: loadImage()
