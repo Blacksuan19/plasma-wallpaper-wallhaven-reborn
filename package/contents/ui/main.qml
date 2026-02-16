@@ -265,6 +265,7 @@ WallpaperItem {
         const localPath = parts.length > 2 ? normalizePath(parts[2]) : "";
         // Prefer local file if it exists, otherwise use URL
         const finalUrl = (localPath && localPath !== "") ? "file://" + localPath : selectedUrl;
+        const thumbnailSource = (localPath && localPath !== "") ? "file://" + localPath : thumbnailUrl;
         let newShownList = shownList.slice();
         newShownList.push(selectedEntry);
         main.configuration.ShownSavedWallpapers = newShownList;
@@ -272,7 +273,7 @@ WallpaperItem {
         showNotification("Wallhaven Wallpaper", "Loading saved wallpaper " + newShownList.length + " of " + savedList.length + " (" + source + ")", "plugin-wallpaper", false);
         main.currentUrl = finalUrl;
         main.configuration.lastValidImagePath = finalUrl;
-        main.configuration.currentWallpaperThumbnail = thumbnailUrl;
+        main.configuration.currentWallpaperThumbnail = thumbnailSource;
         wallpaper.configuration.writeConfig();
         loadImage();
         isLoading = false;
