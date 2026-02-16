@@ -15,9 +15,12 @@ import QtQuick.Window
 import org.kde.kirigami 2.20 as Kirigami
 import org.kde.notification 1.0
 import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.plasma.plasma5support 2.0 as Plasma5Support
 import org.kde.plasma.plasmoid
 
 WallpaperItem {
+    // Continue execution to pick from saved list
+
     id: main
 
     property url currentUrl
@@ -37,6 +40,9 @@ WallpaperItem {
     property string lastLoadedUrl: ""
     readonly property bool systemDarkMode: Kirigami.Theme.textColor.hsvValue > Kirigami.Theme.backgroundColor.hsvValue
     readonly property bool followSystemTheme: main.configuration.FollowSystemTheme
+    readonly property string savedWallpapersDir: normalizePath(Platform.StandardPaths.writableLocation(Platform.StandardPaths.AppDataLocation)) + "/wallhaven-saved"
+    property var pendingDownloads: ({
+    }) // Track pending downloads: {url: {thumbnail, entry}}
 
     function log(msg) {
         console.log(`Wallhaven Wallpaper: ${msg}`);
@@ -44,6 +50,86 @@ WallpaperItem {
 
     function isHttpUrl(url) {
         return url.toString().startsWith("http");
+    }
+
+    function normalizePath(path) {
+        if (!path)
+            return "";
+
+        const text = (typeof path === "string") ? path : path.toString();
+        return text.startsWith("file://") ? text.slice("file://".length) : text;
+    }
+
+    function extractWallhavenId(url) {
+        // Extract ID from URL like: https://w.wallhaven.cc/full/xx/wallhaven-abc123.jpg
+        const match = url.match(/wallhaven-([a-zA-Z0-9]+)/);
+        return match ? match[1] : null;
+    }
+
+    function getLocalPath(wallhavenId) {
+        if (!wallhavenId)
+            return "";
+
+        return savedWallpapersDir + "/" + wallhavenId + ".jpg";
+    }
+
+    function fileExists(path) {
+        if (!path)
+            return false;
+
+        // Use test command to check if file exists and is not empty
+        const checkCmd = `test -s "${path}" && echo "yes" || echo "no"`;
+        return false; // We'll check asynchronously via DataSource
+    }
+
+    function downloadWallpaper(imageUrl, thumbnailUrl) {
+        const wallhavenId = extractWallhavenId(imageUrl);
+        if (!wallhavenId) {
+            log("Could not extract Wallhaven ID from URL: " + imageUrl);
+            // Save without local file
+            saveWallpaperEntry(imageUrl, thumbnailUrl, "");
+            return ;
+        }
+        if (!savedWallpapersDir) {
+            log("Saved wallpapers directory is empty, saving URL only");
+            showNotification("Wallhaven Wallpaper", "Download failed, saving URL only", "dialog-warning", false);
+            saveWallpaperEntry(imageUrl, thumbnailUrl, "");
+            return ;
+        }
+        const localPath = normalizePath(getLocalPath(wallhavenId));
+        log("Downloading wallpaper to: " + localPath);
+        // Store pending download info
+        pendingDownloads[imageUrl] = {
+            "thumbnail": thumbnailUrl,
+            "localPath": localPath,
+            "wallhavenId": wallhavenId
+        };
+        // First create directory, then download
+        const mkdirCmd = `mkdir -p "${savedWallpapersDir}"`;
+        downloadExecutor.connectSource(mkdirCmd);
+    }
+
+    function saveWallpaperEntry(imageUrl, thumbnailUrl, localPath) {
+        // Store as "fullUrl|||thumbnailUrl|||localPath"
+        const normalizedLocalPath = normalizePath(localPath || "");
+        const savedEntry = imageUrl + "|||" + thumbnailUrl + "|||" + normalizedLocalPath;
+        let currentList = main.configuration.SavedWallpapers || [];
+        // Check if already saved
+        const alreadySaved = currentList.some((entry) => {
+            const parts = entry.split("|||");
+            return parts[0] === imageUrl;
+        });
+        if (alreadySaved) {
+            showNotification("Wallhaven Wallpaper", "Wallpaper already saved", "dialog-information", false);
+            return ;
+        }
+        let newList = currentList.slice();
+        newList.push(savedEntry);
+        main.configuration.SavedWallpapers = newList;
+        wallpaper.configuration.writeConfig();
+        log("Saved wallpaper: " + imageUrl + (localPath ? " (local: " + localPath + ")" : ""));
+        const msg = localPath ? "Wallpaper downloaded and saved! Total: " + newList.length : "Wallpaper saved (download failed). Total: " + newList.length;
+        showNotification("Wallhaven Wallpaper", msg, "plugin-wallpaper", false);
     }
 
     function loadFallbackImage() {
@@ -95,23 +181,14 @@ WallpaperItem {
         }
         const urlString = main.currentUrl.toString();
         const thumbnailString = main.configuration.currentWallpaperThumbnail || "";
-        // Store as "fullUrl|||thumbnailUrl" for fast preview loading
-        const savedEntry = urlString + "|||" + thumbnailString;
-        let currentList = main.configuration.SavedWallpapers || [];
-        // Check if already saved (check both old format and new format)
-        const alreadySaved = currentList.some((entry) => {
-            return entry === urlString || entry.startsWith(urlString + "|||");
-        });
-        if (alreadySaved) {
-            showNotification("Wallhaven Wallpaper Error", "Wallpaper already saved", "dialog-error", true);
-            return ;
+        // Download wallpaper to local storage
+        if (isHttpUrl(urlString)) {
+            showNotification("Wallhaven Wallpaper", "Downloading wallpaper...", "download", false);
+            downloadWallpaper(urlString, thumbnailString);
+        } else {
+            // Already a local file, just save the reference
+            saveWallpaperEntry(urlString, thumbnailString, "");
         }
-        let newList = currentList.slice();
-        newList.push(savedEntry);
-        main.configuration.SavedWallpapers = newList;
-        wallpaper.configuration.writeConfig();
-        log("Saved wallpaper: " + urlString);
-        showNotification("Wallhaven Wallpaper", "Wallpaper saved! Total: " + newList.length, "plugin-wallpaper", false);
     }
 
     function loadFromSavedWallpapers() {
@@ -130,8 +207,6 @@ WallpaperItem {
         }
         let shownList = main.configuration.ShownSavedWallpapers || [];
         if (shownList.length >= savedList.length) {
-            // Continue execution to pick from saved list
-
             if (main.configuration.CycleSavedWallpapers) {
                 // Cycle is enabled: reset and continue with saved wallpapers
                 showNotification("Wallhaven Wallpaper", "Restarting saved wallpapers cycle", "plugin-wallpaper", false);
@@ -182,16 +257,20 @@ WallpaperItem {
             // Sequential selection - use the first unshown wallpaper
             selectedEntry = availableWallpapers[0];
         }
-        // Parse entry: "fullUrl|||thumbnailUrl" or just "fullUrl" (old format)
+        // Parse entry: "fullUrl|||thumbnailUrl|||localPath" or "fullUrl|||thumbnailUrl" or just "fullUrl" (old formats)
         const parts = selectedEntry.split("|||");
         const selectedUrl = parts[0];
         const thumbnailUrl = parts.length > 1 ? parts[1] : selectedUrl; // Fallback to full URL for old entries
+        const localPath = parts.length > 2 ? normalizePath(parts[2]) : "";
+        // Prefer local file if it exists, otherwise use URL
+        const finalUrl = (localPath && localPath !== "") ? "file://" + localPath : selectedUrl;
         let newShownList = shownList.slice();
         newShownList.push(selectedEntry);
         main.configuration.ShownSavedWallpapers = newShownList;
-        showNotification("Wallhaven Wallpaper", "Loading saved wallpaper " + newShownList.length + " of " + savedList.length, "plugin-wallpaper", false);
-        main.currentUrl = selectedUrl;
-        main.configuration.lastValidImagePath = selectedUrl;
+        const source = (localPath && localPath !== "") ? "local" : "online";
+        showNotification("Wallhaven Wallpaper", "Loading saved wallpaper " + newShownList.length + " of " + savedList.length + " (" + source + ")", "plugin-wallpaper", false);
+        main.currentUrl = finalUrl;
+        main.configuration.lastValidImagePath = finalUrl;
         main.configuration.currentWallpaperThumbnail = thumbnailUrl;
         wallpaper.configuration.writeConfig();
         loadImage();
@@ -465,6 +544,62 @@ WallpaperItem {
         onTriggered: {
             log("refreshTimer triggered");
             Qt.callLater(refreshImage);
+        }
+    }
+
+    Plasma5Support.DataSource {
+        id: downloadExecutor
+
+        engine: "executable"
+        connectedSources: []
+        onNewData: function(sourceName, data) {
+            const exitCode = data["exit code"];
+            const stdout = data["stdout"];
+            const stderr = data["stderr"];
+            log("Command executed: " + sourceName);
+            log("Exit code: " + exitCode + ", stdout: " + stdout + ", stderr: " + stderr);
+            // Handle mkdir completion - start download
+            if (sourceName.startsWith("mkdir")) {
+                if (exitCode !== 0) {
+                    log("Failed to create directory: " + stderr);
+                    showNotification("Wallhaven Wallpaper", "Download failed, saving URL only", "dialog-warning", false);
+                    // Save URL-only for first pending download
+                    for (let url in pendingDownloads) {
+                        const info = pendingDownloads[url];
+                        saveWallpaperEntry(url, info.thumbnail, "");
+                        delete pendingDownloads[url];
+                        break;
+                    }
+                    disconnectSource(sourceName);
+                    return ;
+                }
+                // Find the pending download and start curl
+                for (let url in pendingDownloads) {
+                    const info = pendingDownloads[url];
+                    const downloadCmd = `curl -L -o "${info.localPath}" "${url}"`;
+                    log("Starting download: " + downloadCmd);
+                    downloadExecutor.connectSource(downloadCmd);
+                    break; // Only process one at a time
+                }
+            } else if (sourceName.startsWith("curl")) {
+                // Download completed, find the corresponding entry
+                for (let url in pendingDownloads) {
+                    if (sourceName.includes(url)) {
+                        const info = pendingDownloads[url];
+                        if (exitCode === 0) {
+                            log("Download successful: " + info.localPath);
+                            saveWallpaperEntry(url, info.thumbnail, info.localPath);
+                        } else {
+                            log("Download failed: " + stderr);
+                            showNotification("Wallhaven Wallpaper", "Download failed, saving URL only", "dialog-warning", false);
+                            saveWallpaperEntry(url, info.thumbnail, "");
+                        }
+                        delete pendingDownloads[url];
+                        break;
+                    }
+                }
+            }
+            disconnectSource(sourceName);
         }
     }
 
