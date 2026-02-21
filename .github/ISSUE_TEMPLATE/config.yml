@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Wallhaven API Documentation
+    url: https://wallhaven.cc/help/api
+    about: Reference for supported query syntax, parameters, and API key setup.
+  - name: KDE Bug Tracker
+    url: https://bugs.kde.org
+    about: For issues related to KDE Plasma itself rather than this plugin.

@@ -1,0 +1,119 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in the plugin
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a bug report, please check the [existing issues](https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn/issues) to avoid duplicates and review the [README](https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn#readme) for troubleshooting steps.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened and what did you expect to happen?
+      placeholder: |
+        **Expected:** ...
+        **Actual:** ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Open settings
+        2. Set query to '...'
+        3. ...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: additional_setup
+    attributes:
+      label: Additional Setup
+      description: Have you followed the [additional setup steps](https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn#additional-setup) in the README?
+      options:
+        - label: Yes, I have followed the additional setup steps.
+          required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Installation Method
+      options:
+        - AUR (yay / paru)
+        - KDE Store (Get New Plugins)
+        - From source (kpackagetool6)
+    validations:
+      required: true
+
+  - type: input
+    id: plugin_version
+    attributes:
+      label: Plugin Version
+      description: Found in the plugin settings or `metadata.json`.
+      placeholder: "e.g. 2.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System & Plasma Version
+      description: Check **System Settings → About This System**.
+      placeholder: "e.g. Arch Linux – Plasma 6.1.5, KF 6.5.0, Qt 6.7.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: graphics_platform
+    attributes:
+      label: Graphics Platform
+      options:
+        - Wayland
+        - X11
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Plugin Configuration
+      description: Relevant settings (query, categories, purity, sorting, etc.). Do **not** include your API key.
+      placeholder: |
+        - Query: landscape
+        - Sorting: Random
+        - Interval: 30 minutes
+        - Dark mode detection: enabled
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Run one of the commands below, reproduce the issue, and paste the output here.
+        ```
+        journalctl -f | grep -i --line-buffered wallhaven
+        ```
+        or for logs from the current boot:
+        ```
+        journalctl -b -0 | grep -i wallhaven
+        ```
+      render: shell
+      placeholder: Paste logs here...
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, attach screenshots to help illustrate the issue. You can drag and drop images directly into this field.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that might help diagnose the issue.

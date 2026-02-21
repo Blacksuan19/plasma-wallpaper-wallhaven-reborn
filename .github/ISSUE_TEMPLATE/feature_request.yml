@@ -1,0 +1,64 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for the plugin
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a feature request, please check the [existing issues](https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn/issues) to see if it has already been requested.
+
+        > [!IMPORTANT]
+        > Please open **one issue per feature**. Issues requesting multiple unrelated features at once will be asked to be split up.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A short, clear summary of the feature you are requesting.
+      placeholder: "e.g. Add support for filtering by color palette"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: What problem does this feature solve, or what use case does it address?
+      placeholder: Describe the problem or use case that motivates this request...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe how you envision this feature working. Include UI/UX details if applicable.
+      placeholder: Describe your proposed solution...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative approaches or workarounds?
+
+  - type: dropdown
+    id: pr
+    attributes:
+      label: Are you willing to implement this?
+      description: |
+        This is a small project maintained in spare time. Features are more likely to be added if you can submit a PR.
+        If you are not able to implement it yourself, the request may still be considered but it may take longer or not be implemented at all.
+      options:
+        - "Yes, I can open a PR for this."
+        - "No, but I can help test it."
+        - "No."
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or links (e.g. Wallhaven API docs) that support this request.
