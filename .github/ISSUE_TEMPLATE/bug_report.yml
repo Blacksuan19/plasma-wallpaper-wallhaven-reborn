@@ -58,12 +58,21 @@ body:
     validations:
       required: true
 
-  - type: input
+  - type: textarea
     id: os
     attributes:
-      label: Operating System & Plasma Version
+      label: System Information
       description: Check **System Settings → About This System**.
-      placeholder: "e.g. Arch Linux – Plasma 6.1.5, KF 6.5.0, Qt 6.7.2"
+      placeholder: |
+        - OS:
+        - KDE Plasma Version:
+        - KDE Frameworks Version:
+        - Qt Version:
+      value: |
+        - OS:
+        - KDE Plasma Version:
+        - KDE Frameworks Version:
+        - Qt Version:
     validations:
       required: true
 
