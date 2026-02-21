@@ -72,6 +72,7 @@ Item {
     property string cfg_RatioCustomValue
     readonly property string savedWallpapersDir: Utils.normalizePath(Platform.StandardPaths.writableLocation(Platform.StandardPaths.AppDataLocation)) + "/wallhaven-saved"
     readonly property string currentThumbnailSource: (wallpaperConfiguration && wallpaperConfiguration.currentWallpaperThumbnail) ? wallpaperConfiguration.currentWallpaperThumbnail : cfg_currentWallpaperThumbnail
+    property bool systemSettingsContext: false
 
     function refreshImage() {
         cfg_RefetchSignal = !cfg_RefetchSignal;
@@ -123,6 +124,8 @@ Item {
             else if (typeof wallpaper !== "undefined" && wallpaper && wallpaper.configuration)
                 wallpaperConfiguration = wallpaper.configuration;
         }
+        // Detect System Settings context: wallpaper global is not available
+        systemSettingsContext = (typeof wallpaper === "undefined" || !wallpaper);
     }
     onConfigDialogChanged: {
         if (!wallpaperConfiguration && configDialog && configDialog.configuration)
@@ -130,15 +133,40 @@ Item {
 
     }
 
+    Kirigami.InlineMessage {
+        id: systemSettingsWarning
+
+        visible: systemSettingsContext
+        type: Kirigami.MessageType.Warning
+        text: i18n("You are configuring this plugin from System Settings. Some features may be unstable here. For the best experience, right-click your desktop and select <b>Configure Desktop and Wallpaper\u2026</b> instead.")
+        showCloseButton: false
+
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+            margins: Kirigami.Units.mediumSpacing
+        }
+
+    }
+
     ScrollView {
         id: scrollView
 
-        // Basic layout setup
-        anchors.fill: parent
-        anchors.margins: Kirigami.Units.smallSpacing
         clip: true
         ScrollBar.vertical.policy: ScrollBar.AlwaysOn
         ScrollBar.horizontal.policy: ScrollBar.AsNeeded
+
+        // Basic layout setup
+        anchors {
+            top: systemSettingsContext ? systemSettingsWarning.bottom : parent.top
+            left: parent.left
+            right: parent.right
+            bottom: parent.bottom
+            topMargin: Kirigami.Units.smallSpacing
+            leftMargin: Kirigami.Units.smallSpacing
+            rightMargin: Kirigami.Units.smallSpacing
+        }
 
         Kirigami.FormLayout {
             id: formLayout
