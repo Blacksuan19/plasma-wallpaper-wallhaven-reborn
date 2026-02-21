@@ -85,6 +85,10 @@ for fast preview loading in settings.
 - the thumbnail in the wallpaper KCM does not change when the wallpaper changes,
   and always shows the first fetched wallpaper. Plasma issue because the KCM
   thumbnail is static by design and cannot be updated dynamically.
+- the System Settings wallpaper KCM can crash when applying changes with this
+  plugin active. Use the **right-click on the desktop → Configure Desktop and
+  Wallpaper** menu instead, which is the stable way to configure the plugin.
+  ([related issue](https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn/issues/2))
 
 ## Installation
 
@@ -123,31 +127,29 @@ kpackagetool6 --type Plasma/Wallpaper --install package/
 plasmashell --replace & disown
 ```
 
-additional setup might be required to get the plugin to work, as below:
+### Additional Setup
 
-- set the plugin as your wallpaper in the wallpaper settings.
-- close the settings window.
-- open the settings window again, new wallpaper should be fetched.
+> [!IMPORTANT] If the wallpaper is not fetched or applied after installation,
+> follow these steps before reporting a bug.
 
-if after the above steps the wallpaper is still not fetched or applied, you can
-try the following:
+- Set the plugin as your wallpaper via **right-click on the desktop → Configure
+  Desktop and Wallpaper** (do not use the System Settings app — see known
+  issues).
+- Close the settings window.
+- Open the settings window again — a new wallpaper should be fetched.
 
-- refresh the wallpaper from context menu or settings page.
+If the wallpaper is still not fetched or applied:
+
+- Refresh the wallpaper from the context menu or settings page.
+- Restart the shell:
+
+  ```bash
+  plasmashell --replace & disown
+  ```
 
 ## Reporting Bugs
 
-if you encounter any issues with the plugin, you can report them on the issue
-tracker using the following steps:
-
-- open a terminal and start journalctl with
-  `journalctl -f | grep -i --line-buffered wallhaven` this will show logs
-  related to the plugin.
-- reproduce the issue.
-- copy the logs from the terminal and paste them in the issue description.
-- describe the issue in detail, and if possible provide steps to reproduce the
-  issue.
-
-if the issue cannot be reproduced, you may still open an issue with a
-description of the issue and any relevant logs using
-`journalctl -b -0 | grep -i wallhaven`, this will show logs related to the
-plugin from the current boot.
+Please use the
+[issue tracker](https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn/issues/new/choose)
+to report bugs. The bug report template will guide you through providing all the
+necessary information.
