@@ -39,6 +39,7 @@ WallpaperItem {
     readonly property string userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     property bool isLoading: false
     property string lastLoadedUrl: ""
+    property var currentWallpaperColors: []
     readonly property bool systemDarkMode: Kirigami.Theme.textColor.hsvValue > Kirigami.Theme.backgroundColor.hsvValue
     readonly property bool followSystemTheme: main.configuration.FollowSystemTheme
     readonly property string savedWallpapersDir: Utils.normalizePath(Platform.StandardPaths.writableLocation(Platform.StandardPaths.AppDataLocation)) + "/wallhaven-saved"
@@ -108,12 +109,14 @@ WallpaperItem {
                 main.configuration.ShownSavedWallpapers = shownSavedWallpapers;
                 wallpaper.configuration.writeConfig();
             },
-            "downloadWallpaper": function(url, thumb) {
-                Downloads.queueDownload(buildDownloadCtx(), url, thumb);
+            "downloadWallpaper": function(url, thumb, isDark) {
+                Downloads.queueDownload(buildDownloadCtx(), url, thumb, isDark);
             },
-            "saveEntry": function(url, thumb, localPath) {
-                Downloads.saveEntry(buildDownloadCtx(), url, thumb, localPath);
+            "saveEntry": function(url, thumb, localPath, isDark) {
+                Downloads.saveEntry(buildDownloadCtx(), url, thumb, localPath, isDark);
             },
+            "isDark": Utils.isColorsArrayDark(currentWallpaperColors),
+            "systemDarkMode": systemDarkMode,
             "utils": Utils,
             "log": log
         };
@@ -284,6 +287,7 @@ WallpaperItem {
 
             const imageObj = d.data[index] || {
             };
+            currentWallpaperColors = imageObj.colors || [];
             const remoteUrl = imageObj.path;
             main.currentPage = d.meta.current_page;
             main.configuration.currentWallpaperThumbnail = imageObj.thumbs.small;
@@ -354,6 +358,12 @@ WallpaperItem {
     onSystemDarkModeChanged: {
         if (followSystemTheme) {
             log("System theme changed");
+            if (main.configuration.UseSavedWallpapers) {
+                // Reset shown list so the dark/light subset is re-cycled from scratch
+                shownSavedWallpapers = [];
+                main.configuration.ShownSavedWallpapers = [];
+                wallpaper.configuration.writeConfig();
+            }
             refreshTimer.restart();
         }
     }

@@ -7,19 +7,34 @@ function saveCurrentWallpaper(ctx) {
     const thumbnail = ctx.thumbnail();
     if (ctx.utils.isHttpUrl(currentUrl)) {
         ctx.notify("Wallhaven Wallpaper", "Downloading wallpaper...", "download", false);
-        ctx.downloadWallpaper(currentUrl, thumbnail);
+        ctx.downloadWallpaper(currentUrl, thumbnail, ctx.isDark);
     } else {
-        ctx.saveEntry(currentUrl, thumbnail, "");
+        ctx.saveEntry(currentUrl, thumbnail, "", null);
     }
 }
 
 function loadFromSavedWallpapers(ctx) {
     const config = ctx.config;
-    const savedList = config.SavedWallpapers || [];
-    if (savedList.length === 0) {
+    const fullSavedList = config.SavedWallpapers || [];
+    if (fullSavedList.length === 0) {
         ctx.notify("Wallhaven Wallpaper", "No saved wallpapers found. Fetching from Wallhaven...", "plugin-wallpaper", false);
         ctx.fetchFromWallhaven("No saved wallpapers found. Fetching from Wallhaven...");
         return;
+    }
+
+    // Filter to dark wallpapers when FollowSystemTheme is enabled and system is in dark mode.
+    // Entries with unknown darkness (isDark === null, e.g. older saved entries) are always included.
+    let savedList = fullSavedList;
+    if (config.FollowSystemTheme && ctx.systemDarkMode) {
+        const darkList = fullSavedList.filter((entry) => {
+            const parsed = ctx.utils.parseSavedEntry(entry);
+            return parsed.isDark !== false; // include dark (true) and unknown (null)
+        });
+        if (darkList.length > 0) {
+            savedList = darkList;
+        } else {
+            ctx.log("No dark saved wallpapers found, cycling all saved wallpapers");
+        }
     }
 
     let shownList = ctx.getShownList();

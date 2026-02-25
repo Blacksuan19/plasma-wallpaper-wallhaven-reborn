@@ -23,11 +23,13 @@ function parseSavedEntry(entry) {
     const fullUrl = parts[0];
     const thumbUrl = parts.length > 1 ? parts[1] : fullUrl;
     const localPath = parts.length > 2 ? normalizePath(parts[2]) : "";
+    const isDark = parts.length > 3 ? (parts[3] === "1" ? true : parts[3] === "0" ? false : null) : null;
 
     return {
         fullUrl: fullUrl,
         thumbUrl: thumbUrl,
-        localPath: localPath
+        localPath: localPath,
+        isDark: isDark
     };
 }
 
@@ -54,6 +56,23 @@ function buildRatioParameter(config) {
         ratios.push(config.RatioCustomValue);
 
     return ratios.length > 0 ? `ratios=${ratios.join(',')}&` : "";
+}
+
+function isColorDark(hex) {
+    hex = hex.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    // Perceived brightness (ITU-R BT.601)
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness < 128;
+}
+
+function isColorsArrayDark(colors) {
+    if (!colors || colors.length === 0)
+        return null; // unknown
+    const darkCount = colors.filter(c => isColorDark(c)).length;
+    return darkCount > colors.length / 2;
 }
 
 function buildQueryParameter(config, systemDarkMode, currentSearchTermIndex) {
