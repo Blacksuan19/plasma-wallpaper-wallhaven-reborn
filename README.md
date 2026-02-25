@@ -46,6 +46,17 @@ Port of wallhaven wallpaper plugin by
   - clear all removes both the list and the local files.
   - automatically fetch from Wallhaven when saved list is empty.
 
+### Current known issues
+
+- the plugin cannot be set as lock screen wallpaper.
+  ([networking related](https://bugs.kde.org/show_bug.cgi?id=483094))
+- the Wallpaper settings in the System Settings app does not work properly with
+  this plugin. Use the **right-click on the desktop → Configure Desktop and
+  Wallpaper** menu instead — this is the only supported way to configure the
+  plugin. (check related issues
+  [#17](https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn/issues/17),
+  [#30](https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn/issues/30))
+
 ### How to Search
 
 the query field accepts the following types of entries, each matching the
@@ -90,18 +101,6 @@ Build a personal collection of your favorite wallpapers with true offline use:
 Saved wallpapers persist across plasmashell restarts and include thumbnail URLs
 for fast preview loading in settings.
 
-### Current known issues
-
-- the plugin cannot be set as lock screen wallpaper.
-  ([networking related](https://bugs.kde.org/show_bug.cgi?id=483094))
-- the thumbnail in the wallpaper KCM does not change when the wallpaper changes,
-  and always shows the first fetched wallpaper. Plasma issue because the KCM
-  thumbnail is static by design and cannot be updated dynamically.
-- the System Settings wallpaper KCM can crash when applying changes with this
-  plugin active. Use the **right-click on the desktop → Configure Desktop and
-  Wallpaper** menu instead, which is the stable way to configure the plugin.
-  ([related issue](https://github.com/Blacksuan19/plasma-wallpaper-wallhaven-reborn/issues/2))
-
 ## Installation
 
 ### Arch Linux
@@ -121,8 +120,8 @@ Install the plugin from the KDE Store Plasma 6 version
 - Right click on the Desktop > Configure Desktop and Wallpaper... > Get New
   Plugins
 - Search for "Wallhaven Wallpaper Reborn", install and set it as your wallpaper.
-- To set as Lock Screen wallpaper go to System settings > Screen Locking >
-  Appearance: Configure...
+- Restart plasmashell if the wallpaper is not fetched or applied. (check
+  Additional Setup below)
 
 ### From source
 
@@ -141,8 +140,8 @@ plasmashell --replace & disown
 
 ### Additional Setup
 
-> [!IMPORTANT] If the wallpaper is not fetched or applied after installation,
-> follow these steps before reporting a bug.
+> If the wallpaper is not fetched or applied after installation, follow these
+> steps before reporting a bug.
 
 - Set the plugin as your wallpaper via **right-click on the desktop → Configure
   Desktop and Wallpaper** (do not use the System Settings app — see known
