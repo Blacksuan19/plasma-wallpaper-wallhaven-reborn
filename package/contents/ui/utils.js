@@ -83,8 +83,10 @@ function buildQueryParameter(config, systemDarkMode, currentSearchTermIndex) {
         termIndex = (termIndex + 1) % terms.length;
 
     let finalQuery = terms[termIndex].trim();
-    if (config.FollowSystemTheme && systemDarkMode)
-        finalQuery = (finalQuery ? finalQuery + "" : "") + "+dark";
+    // id: is an exact tag search and cannot be combined with other terms
+    const isExactTagSearch = finalQuery.toLowerCase().startsWith("id:");
+    if (config.FollowSystemTheme && systemDarkMode && !isExactTagSearch)
+        finalQuery = (finalQuery ? finalQuery + " " : "") + "+dark";
 
     return {
         query: finalQuery,
