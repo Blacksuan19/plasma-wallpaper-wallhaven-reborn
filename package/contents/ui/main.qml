@@ -470,10 +470,10 @@ WallpaperItem {
                             else
                                 root.replace(imageItem);
                         }
-                        main.accentColorChanged();
                         isLoading = false;
                     }
                 }
+                QQC2.StackView.onActivated: main.accentColorChanged()
                 QQC2.StackView.onDeactivated: destroy()
                 QQC2.StackView.onRemoved: destroy()
             }
