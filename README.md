@@ -24,6 +24,7 @@ Port of wallhaven wallpaper plugin by
 - add right click context menu action to fetch new wallpaper.
 - streamline the settings page.
 - allow using multiple tags as query parameters.
+  - tags must be real wallhaven tag names (e.g. `nature`, `landscape`).
   - tags should be separated by commas.
   - one tag is chosen randomly from the list of tags for each wallpaper.
 - add ability to pass a custom aspect ratio or multiple aspect ratios.
@@ -47,14 +48,25 @@ Port of wallhaven wallpaper plugin by
 
 ### How to Search
 
-the query field supports all types of queries supported by the wallhaven API,
-this means other than tags, you can also filter by:
+the query field accepts the following types of entries, each matching the
+wallhaven API search syntax:
 
-- wallhaven user name: `@username`
-- wallpapers similar to a wallpaper: `id:123456`
-- you can combine the above with tags: `@username,tag1,tag2,id:123456` this will
-  find a wallpaper matching any of the tags, the user, or the id each time you
-  fetch a new wallpaper.
+- **tag name** (fuzzy keyword search): `nature`, `landscape`, `anime` — must be
+  real wallhaven tag names, not arbitrary words or numbers like `tag1` or
+  `tag8621`.
+- **exact tag by ID**: `id:1` — searches for wallpapers with the tag that has
+  that numeric ID. find a tag's ID by looking at the URL of its page on
+  wallhaven.cc. **cannot be combined with other terms in the same entry.**
+- **wallhaven username**: `@username` — shows wallpapers uploaded by that user.
+- **similar wallpapers**: `like:abc123z` — finds wallpapers similar to the one
+  with that wallpaper ID (the alphanumeric ID from the wallhaven URL, e.g.
+  `wallhaven.cc/w/abc123z`).
+- **comma-separated list**: `nature,landscape,@username,like:abc123z` — the
+  plugin picks one entry at random each time a new wallpaper is fetched, so each
+  entry must be a valid standalone query.
+
+if you are unsure what tags exist, browse [wallhaven.cc](https://wallhaven.cc)
+and check the tags listed on any wallpaper page.
 
 for more information about the wallhaven API, you can check the
 [official documentation](https://wallhaven.cc/help/api).

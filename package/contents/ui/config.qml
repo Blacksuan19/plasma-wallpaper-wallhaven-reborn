@@ -417,7 +417,7 @@ Item {
 
                     Layout.fillWidth: true
                     text: root.cfg_Query
-                    placeholderText: i18n("tag1, tag2, @username, id:123456")
+                    placeholderText: i18n("nature, landscape, @username, id:123456")
                     ToolTip.text: "Search terms separated by comma"
                     ToolTip.visible: queryInput.activeFocus
                     leftPadding: 12
@@ -425,7 +425,7 @@ Item {
 
                 Button {
                     icon.name: "dialog-information-symbolic"
-                    ToolTip.text: i18n("<b>Supported Query Formats:</b><ul><li>tag names: <code>tag1</code></li><li>wallhaven user name: <code>@username</code></li><li>wallpapers similar to a wallpaper with id: <code>id:123456</code></li><li>combination of all: <code>@username,tag1,tag2,id:123456</code></li></ul>this will find a wallpaper matching any of the tags, the user, or the id each time a new wallpaper is fetched.")
+                    ToolTip.text: i18n("<b>Supported Query Formats:</b><ul><li>tag name (fuzzy): <code>nature</code>, <code>landscape</code></li><li>exact tag by numeric ID: <code>id:1</code> (cannot be combined)</li><li>wallhaven username: <code>@username</code></li><li>similar wallpapers: <code>like:abc123z</code> (wallpaper ID from URL)</li><li>comma-separated list: <code>nature,@username,like:abc123z</code></li></ul>Each comma-separated entry is picked randomly and must be a valid standalone query. Tag names must be real wallhaven tags, not arbitrary words or numbers.")
                     highlighted: true
                     hoverEnabled: true
                     ToolTip.visible: hovered
