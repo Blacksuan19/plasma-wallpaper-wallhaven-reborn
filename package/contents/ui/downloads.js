@@ -33,7 +33,7 @@ function queueDownload(ctx, imageUrl, thumbnailUrl, isDark) {
     if (!ctx.savedDir) {
         if (ctx.log)
             ctx.log("Saved wallpapers directory is empty, saving URL only");
-        ctx.notify("Wallhaven Wallpaper", "Download failed, saving URL only", "dialog-warning", false);
+        ctx.notify("Wallhaven Wallpaper Error", "Download failed, saving URL only", "dialog-error", true);
         saveEntry(ctx, imageUrl, thumbnailUrl, "", isDark);
         return;
     }
@@ -65,7 +65,7 @@ function handleExecResult(ctx, sourceName, data) {
         if (exitCode !== 0) {
             if (ctx.log)
                 ctx.log("Failed to create directory: " + stderr);
-            ctx.notify("Wallhaven Wallpaper", "Download failed, saving URL only", "dialog-warning", false);
+            ctx.notify("Wallhaven Wallpaper Error", "Download failed, saving URL only", "dialog-error", true);
             for (let url in ctx.pendingDownloads) {
                 const info = ctx.pendingDownloads[url];
                 saveEntry(ctx, url, info.thumbnail, "", info.isDark);
@@ -94,7 +94,7 @@ function handleExecResult(ctx, sourceName, data) {
                 } else {
                     if (ctx.log)
                         ctx.log("Download failed: " + stderr);
-                    ctx.notify("Wallhaven Wallpaper", "Download failed, saving URL only", "dialog-warning", false);
+                    ctx.notify("Wallhaven Wallpaper Error", "Download failed, saving URL only", "dialog-error", true);
                     saveEntry(ctx, url, info.thumbnail, "", info.isDark);
                 }
                 delete ctx.pendingDownloads[url];
