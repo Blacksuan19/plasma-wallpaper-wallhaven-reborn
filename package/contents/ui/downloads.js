@@ -77,7 +77,7 @@ function queueDownload(ctx, imageUrl, thumbnailUrl, isDark) {
         return;
     }
 
-    const localPath = ctx.savedDir + "/" + wallhavenId + ".jpg";
+    const localPath = ctx.savedDir + "/wallhaven-" + wallhavenId + ".jpg";
     if (ctx.log)
         ctx.log("Downloading wallpaper to: " + localPath);
 
