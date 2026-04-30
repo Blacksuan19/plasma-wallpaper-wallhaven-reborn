@@ -359,6 +359,16 @@ WallpaperItem {
         }
     }
 
+    function openWallpaperPage() {
+        const currentUrlString = main.currentUrl ? main.currentUrl.toString() : "";
+        const wallhavenId = Utils.extractWallhavenId(currentUrlString);
+        if (!wallhavenId) {
+            showNotification("Wallhaven Wallpaper Error", "Could not determine the wallpaper page for this image", "dialog-error", true);
+            return ;
+        }
+        Qt.openUrlExternally(`https://wallhaven.cc/w/${wallhavenId}`);
+    }
+
     anchors.fill: parent
     Component.onCompleted: {
         loadStartupCache();
@@ -387,9 +397,9 @@ WallpaperItem {
     onFollowSystemThemeChanged: refreshTimer.restart()
     contextualActions: [
         PlasmaCore.Action {
-            text: i18n("Open Wallpaper URL")
+            text: i18n("Open Wallpaper Page")
             icon.name: "link"
-            onTriggered: Qt.openUrlExternally(main.currentUrl)
+            onTriggered: openWallpaperPage()
         },
         PlasmaCore.Action {
             text: i18n("Save Wallpaper")
