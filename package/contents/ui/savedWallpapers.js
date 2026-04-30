@@ -9,7 +9,7 @@ function saveCurrentWallpaper(ctx) {
         ctx.notify("Wallhaven Wallpaper", "Downloading wallpaper...", "download", false);
         ctx.downloadWallpaper(currentUrl, thumbnail, ctx.isDark);
     } else {
-        ctx.saveEntry(currentUrl, thumbnail, "", null);
+        ctx.notify("Wallhaven Wallpaper Error", "Only wallpapers downloaded from Wallhaven can be saved", "dialog-error", true);
     }
 }
 

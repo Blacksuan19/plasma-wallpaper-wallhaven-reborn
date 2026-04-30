@@ -1,5 +1,18 @@
+function formatCommandError(stderr, stdout, exitCode) {
+    let details = (stderr || stdout || ("Exit code: " + exitCode) || "Unknown error").toString();
+    details = details.replace(/\s+/g, " ").trim();
+    if (details.length > 160)
+        details = details.slice(0, 157) + "...";
+    return details;
+}
+
 function saveEntry(ctx, imageUrl, thumbnailUrl, localPath, isDark) {
     const normalizedLocalPath = ctx.utils.normalizePath(localPath || "");
+    if (!normalizedLocalPath) {
+        if (ctx.log)
+            ctx.log("Skipping save entry because no local file was downloaded for: " + imageUrl);
+        return;
+    }
     const darkFlag = isDark === true ? "1" : isDark === false ? "0" : "";
     const savedEntry = imageUrl + "|||" + thumbnailUrl + "|||" + normalizedLocalPath + "|||" + darkFlag;
     let currentList = ctx.config.SavedWallpapers || [];
@@ -16,10 +29,9 @@ function saveEntry(ctx, imageUrl, thumbnailUrl, localPath, isDark) {
     ctx.config.SavedWallpapers = newList;
     ctx.writeConfig();
     if (ctx.log)
-        ctx.log("Saved wallpaper: " + imageUrl + (normalizedLocalPath ? " (local: " + normalizedLocalPath + ")" : ""));
+        ctx.log("Saved wallpaper: " + imageUrl + " (local: " + normalizedLocalPath + ")");
 
-    const msg = normalizedLocalPath ? "Wallpaper downloaded and saved! Total: " + newList.length : "Wallpaper saved (download failed). Total: " + newList.length;
-    ctx.notify("Wallhaven Wallpaper", msg, "plugin-wallpaper", false);
+    ctx.notify("Wallhaven Wallpaper", "Wallpaper downloaded and saved! Total: " + newList.length, "plugin-wallpaper", false);
 }
 
 function queueDownload(ctx, imageUrl, thumbnailUrl, isDark) {
@@ -27,14 +39,13 @@ function queueDownload(ctx, imageUrl, thumbnailUrl, isDark) {
     if (!wallhavenId) {
         if (ctx.log)
             ctx.log("Could not extract Wallhaven ID from URL: " + imageUrl);
-        saveEntry(ctx, imageUrl, thumbnailUrl, "", isDark);
+        ctx.notify("Wallhaven Wallpaper Error", "Could not determine a filename for this wallpaper", "dialog-error", true);
         return;
     }
     if (!ctx.savedDir) {
         if (ctx.log)
-            ctx.log("Saved wallpapers directory is empty, saving URL only");
-        ctx.notify("Wallhaven Wallpaper Error", "Download failed, saving URL only", "dialog-error", true);
-        saveEntry(ctx, imageUrl, thumbnailUrl, "", isDark);
+            ctx.log("Saved wallpapers directory is empty");
+        ctx.notify("Wallhaven Wallpaper Error", "Download failed: saved wallpapers directory is unavailable", "dialog-error", true);
         return;
     }
 
@@ -63,12 +74,11 @@ function handleExecResult(ctx, sourceName, data) {
 
     if (sourceName.startsWith("mkdir")) {
         if (exitCode !== 0) {
+            const errorDetails = formatCommandError(stderr, stdout, exitCode);
             if (ctx.log)
-                ctx.log("Failed to create directory: " + stderr);
-            ctx.notify("Wallhaven Wallpaper Error", "Download failed, saving URL only", "dialog-error", true);
+                ctx.log("Failed to create directory: " + errorDetails);
+            ctx.notify("Wallhaven Wallpaper Error", "Download failed: could not create saved wallpapers directory. " + errorDetails, "dialog-error", true);
             for (let url in ctx.pendingDownloads) {
-                const info = ctx.pendingDownloads[url];
-                saveEntry(ctx, url, info.thumbnail, "", info.isDark);
                 delete ctx.pendingDownloads[url];
                 break;
             }
@@ -77,7 +87,7 @@ function handleExecResult(ctx, sourceName, data) {
         }
         for (let url in ctx.pendingDownloads) {
             const info = ctx.pendingDownloads[url];
-            const downloadCmd = `curl -L -o "${info.localPath}" "${url}"`;
+            const downloadCmd = `curl --fail --show-error --location --connect-timeout 10 --max-time 60 -o "${info.localPath}" "${url}"`;
             if (ctx.log)
                 ctx.log("Starting download: " + downloadCmd);
             ctx.exec(downloadCmd);
@@ -92,10 +102,10 @@ function handleExecResult(ctx, sourceName, data) {
                         ctx.log("Download successful: " + info.localPath);
                     saveEntry(ctx, url, info.thumbnail, info.localPath, info.isDark);
                 } else {
+                    const errorDetails = formatCommandError(stderr, stdout, exitCode);
                     if (ctx.log)
-                        ctx.log("Download failed: " + stderr);
-                    ctx.notify("Wallhaven Wallpaper Error", "Download failed, saving URL only", "dialog-error", true);
-                    saveEntry(ctx, url, info.thumbnail, "", info.isDark);
+                        ctx.log("Download failed: " + errorDetails);
+                    ctx.notify("Wallhaven Wallpaper Error", "Download failed: " + errorDetails, "dialog-error", true);
                 }
                 delete ctx.pendingDownloads[url];
                 break;
