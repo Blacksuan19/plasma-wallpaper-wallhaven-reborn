@@ -14,7 +14,7 @@ function isHttpUrl(url) {
 }
 
 function extractWallhavenId(url) {
-    const match = url.match(/wallhaven-([a-zA-Z0-9]+)/);
+    const match = url.match(/(?:wallhaven-)?([a-zA-Z0-9]{6})(?=\.[a-zA-Z0-9]+(?:$|[?#])|$)/);
     return match ? match[1] : null;
 }
 
