@@ -89,6 +89,16 @@ ColumnLayout {
             cfg_SyncGroupId = createSyncGroupId();
     }
 
+    function disableScreenSynchronization() {
+        cfg_SynchronizeScreens = false;
+        cfg_SyncGroupId = "";
+    }
+
+    function saveConfig() {
+        if (!configDialog || !("allScreens" in configDialog) || !configDialog.allScreens)
+            disableScreenSynchronization();
+    }
+
     function refreshImage() {
         cfg_RefetchSignal = !cfg_RefetchSignal;
         if (wallpaperConfiguration)
@@ -146,6 +156,8 @@ ColumnLayout {
         if (!wallpaperConfiguration && configDialog && configDialog.configuration)
             wallpaperConfiguration = configDialog.configuration;
 
+        if (configDialog && "allScreens" in configDialog && configDialog.allScreens)
+            enableScreenSynchronization(false);
     }
 
     Connections {
@@ -156,6 +168,13 @@ ColumnLayout {
         function onAllScreensChanged() {
             if (configDialog.allScreens)
                 enableScreenSynchronization(true);
+            else
+                disableScreenSynchronization();
+        }
+
+        function onNeedsSaveChanged() {
+            if (configDialog.needsSave && !configDialog.allScreens)
+                disableScreenSynchronization();
         }
     }
 
@@ -692,32 +711,6 @@ ColumnLayout {
             Item {
                 Kirigami.FormData.isSection: true
                 Kirigami.FormData.label: i18n("Timer Settings")
-            }
-
-            GroupBox {
-                Kirigami.FormData.label: i18n("Multiple screens:")
-                Layout.fillWidth: true
-
-                ColumnLayout {
-                    anchors.fill: parent
-
-                    CheckBox {
-                        text: i18n("Show the same wallpaper on synchronized screens")
-                        checked: cfg_SynchronizeScreens
-                        onToggled: {
-                            cfg_SynchronizeScreens = checked;
-                            if (checked && !cfg_SyncGroupId)
-                                cfg_SyncGroupId = createSyncGroupId();
-                        }
-                    }
-
-                    Label {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        color: Kirigami.Theme.disabledTextColor
-                        text: i18n("Plasma's 'Set for all screens' option enables this automatically. Disable it to let each screen choose wallpapers independently.")
-                    }
-                }
             }
 
             // Timer settings

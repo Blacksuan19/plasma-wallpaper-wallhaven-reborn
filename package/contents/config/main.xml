@@ -65,11 +65,11 @@
       <default>60</default>
     </entry>
     <entry name="SynchronizeScreens" type="bool">
-      <label>Show the same dynamically selected wallpaper on synchronized screens.</label>
+      <label>Use the same dynamically selected wallpaper across all screens.</label>
       <default>false</default>
     </entry>
     <entry name="SyncGroupId" type="String">
-      <label>Internal identifier for a group of synchronized screens.</label>
+      <label>Internal identifier shared by wallpaper instances across all screens.</label>
       <default></default>
     </entry>
     <entry name="RetryRequestCount" type="int">

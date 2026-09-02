@@ -45,9 +45,8 @@ Port of wallhaven wallpaper plugin by
   - open the saved wallpapers folder from settings.
   - clear all removes both the list and the local files.
 - automatically fetch from Wallhaven when saved list is empty.
-- synchronize one dynamically selected wallpaper across multiple screens.
-  Plasma's **Set for all screens** option enables synchronization automatically,
-  or it can be controlled from the plugin's Multiple screens setting.
+- use the same dynamically selected wallpaper across all screens when the
+  configuration is applied using Plasma's **Set for all screens** option.
 
 ### Current known issues
 
