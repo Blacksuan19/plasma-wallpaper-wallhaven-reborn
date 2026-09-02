@@ -43,6 +43,8 @@ Item {
     property int cfg_FillMode
     property int cfg_WallpaperDelay: 60
     property int cfg_WallpaperLimit: 100
+    property bool cfg_SynchronizeScreens: false
+    property string cfg_SyncGroupId
     property int cfg_RetryRequestCount: 3
     property int cfg_RetryRequestDelay: 5
     property int cfg_ResolutionX: 1920
@@ -73,6 +75,17 @@ Item {
     readonly property string savedWallpapersDir: Utils.normalizePath(Platform.StandardPaths.writableLocation(Platform.StandardPaths.AppDataLocation)) + "/wallhaven-saved"
     readonly property string currentThumbnailSource: (wallpaperConfiguration && wallpaperConfiguration.currentWallpaperThumbnail) ? wallpaperConfiguration.currentWallpaperThumbnail : cfg_currentWallpaperThumbnail
     property bool systemSettingsContext: false
+
+    function createSyncGroupId() {
+        const randomPart = Math.floor(Math.random() * 0xFFFFFF).toString(36);
+        return "wallhaven-" + Date.now().toString(36) + "-" + randomPart;
+    }
+
+    function enableScreenSynchronization(createNewGroup) {
+        cfg_SynchronizeScreens = true;
+        if (createNewGroup || !cfg_SyncGroupId)
+            cfg_SyncGroupId = createSyncGroupId();
+    }
 
     function refreshImage() {
         cfg_RefetchSignal = !cfg_RefetchSignal;
@@ -126,11 +139,24 @@ Item {
         }
         // Detect System Settings context: wallpaper global is not available
         systemSettingsContext = (typeof wallpaper === "undefined" || !wallpaper);
+        if (configDialog && "allScreens" in configDialog && configDialog.allScreens)
+            enableScreenSynchronization(false);
     }
     onConfigDialogChanged: {
         if (!wallpaperConfiguration && configDialog && configDialog.configuration)
             wallpaperConfiguration = configDialog.configuration;
 
+    }
+
+    Connections {
+        target: configDialog
+        enabled: !!(configDialog && "allScreens" in configDialog)
+        ignoreUnknownSignals: true
+
+        function onAllScreensChanged() {
+            if (configDialog.allScreens)
+                enableScreenSynchronization(true);
+        }
     }
 
     Kirigami.InlineMessage {
@@ -697,6 +723,32 @@ Item {
             Item {
                 Kirigami.FormData.isSection: true
                 Kirigami.FormData.label: i18n("Timer Settings")
+            }
+
+            GroupBox {
+                Kirigami.FormData.label: i18n("Multiple screens:")
+                Layout.fillWidth: true
+
+                ColumnLayout {
+                    anchors.fill: parent
+
+                    CheckBox {
+                        text: i18n("Show the same wallpaper on synchronized screens")
+                        checked: cfg_SynchronizeScreens
+                        onToggled: {
+                            cfg_SynchronizeScreens = checked;
+                            if (checked && !cfg_SyncGroupId)
+                                cfg_SyncGroupId = createSyncGroupId();
+                        }
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        color: Kirigami.Theme.disabledTextColor
+                        text: i18n("Plasma's 'Set for all screens' option enables this automatically. Disable it to let each screen choose wallpapers independently.")
+                    }
+                }
             }
 
             // Timer settings

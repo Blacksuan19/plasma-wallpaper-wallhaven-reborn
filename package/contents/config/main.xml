@@ -64,6 +64,14 @@
       <label>How much time in minutes between wallpaper change.</label>
       <default>60</default>
     </entry>
+    <entry name="SynchronizeScreens" type="bool">
+      <label>Show the same dynamically selected wallpaper on synchronized screens.</label>
+      <default>false</default>
+    </entry>
+    <entry name="SyncGroupId" type="String">
+      <label>Internal identifier for a group of synchronized screens.</label>
+      <default></default>
+    </entry>
     <entry name="RetryRequestCount" type="int">
       <label>How many times to retry request when it fails.</label>
       <default>3</default>

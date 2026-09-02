@@ -44,7 +44,10 @@ Port of wallhaven wallpaper plugin by
   - shuffle saved wallpapers for random playback or display in sequential order.
   - open the saved wallpapers folder from settings.
   - clear all removes both the list and the local files.
-  - automatically fetch from Wallhaven when saved list is empty.
+- automatically fetch from Wallhaven when saved list is empty.
+- synchronize one dynamically selected wallpaper across multiple screens.
+  Plasma's **Set for all screens** option enables synchronization automatically,
+  or it can be controlled from the plugin's Multiple screens setting.
 
 ### Current known issues
 
