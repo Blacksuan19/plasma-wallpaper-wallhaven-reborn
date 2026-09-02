@@ -29,8 +29,10 @@ import org.kde.kquickcontrols 2.0 as KQuickControls
 import org.kde.plasma.plasma5support 2.0 as Plasma5Support
 import "utils.js" as Utils
 
-Item {
+ColumnLayout {
     id: root
+
+    spacing: 0
 
     // Accept the property systemsettings/plasmashell injects for KCMs.
     property var configDialog
@@ -128,8 +130,6 @@ Item {
         execHelper.connectSource(cmd);
     }
 
-    implicitWidth: parent.width
-    implicitHeight: parent.height
     Component.onCompleted: {
         if (!wallpaperConfiguration) {
             if (configDialog && configDialog.configuration)
@@ -162,43 +162,20 @@ Item {
     Kirigami.InlineMessage {
         id: systemSettingsWarning
 
+        Layout.fillWidth: true
+        Layout.margins: Kirigami.Units.mediumSpacing
         visible: systemSettingsContext
         type: Kirigami.MessageType.Warning
-        text: i18n("You are configuring this plugin from System Settings. Some features may be unstable here. For the best experience, right-click your desktop and select <b>Configure Desktop and Wallpaper\u2026</b> instead.")
+        text: i18n("Some features may be unstable when configured from System Settings. For individual screens, right-click the desktop and select <b>Configure Desktop and Wallpaper\u2026</b>. To use the same wallpaper across all screens, enable Plasma's <b>Set for all screens</b> option here.")
         showCloseButton: false
-
-        anchors {
-            top: parent.top
-            left: parent.left
-            right: parent.right
-            margins: Kirigami.Units.mediumSpacing
-        }
-
     }
 
-    ScrollView {
-        id: scrollView
+    Kirigami.FormLayout {
+        id: formLayout
 
-        clip: true
-        ScrollBar.vertical.policy: ScrollBar.AlwaysOn
-        ScrollBar.horizontal.policy: ScrollBar.AsNeeded
-
-        // Basic layout setup
-        anchors {
-            top: systemSettingsContext ? systemSettingsWarning.bottom : parent.top
-            left: parent.left
-            right: parent.right
-            bottom: parent.bottom
-            topMargin: Kirigami.Units.smallSpacing
-            leftMargin: Kirigami.Units.smallSpacing
-            rightMargin: Kirigami.Units.smallSpacing
-        }
-
-        Kirigami.FormLayout {
-            id: formLayout
-
-            // Fix binding loop by using a fixed width calculation
-            width: scrollView.width - (scrollView.ScrollBar.vertical.visible ? scrollView.ScrollBar.vertical.width + Kirigami.Units.smallSpacing : 0) - Kirigami.Units.largeSpacing
+        Layout.fillWidth: true
+        Layout.leftMargin: Kirigami.Units.smallSpacing
+        Layout.rightMargin: Kirigami.Units.smallSpacing
 
             Item {
                 Kirigami.FormData.label: i18n("Current Wallpaper:")
@@ -449,16 +426,8 @@ Item {
                     leftPadding: 12
                 }
 
-                Button {
-                    icon.name: "dialog-information-symbolic"
-                    ToolTip.text: i18n("<b>Supported Query Formats:</b><ul><li>tag name (fuzzy): <code>nature</code>, <code>landscape</code></li><li>exact tag by numeric ID: <code>id:1</code> (cannot be combined)</li><li>wallhaven username: <code>@username</code></li><li>similar wallpapers: <code>like:abc123z</code> (wallpaper ID from URL)</li><li>comma-separated list: <code>nature,@username,like:abc123z</code></li></ul>Each comma-separated entry is picked randomly and must be a valid standalone query. Tag names must be real wallhaven tags, not arbitrary words or numbers.")
-                    highlighted: true
-                    hoverEnabled: true
-                    ToolTip.visible: hovered
-                    Kirigami.Theme.inherit: false
-                    flat: true
-                    Layout.alignment: Qt.AlignRight
-                    Layout.fillWidth: false
+                Kirigami.ContextualHelpButton {
+                    toolTipText: i18n("<b>Supported Query Formats:</b><ul><li>tag name (fuzzy): <code>nature</code>, <code>landscape</code></li><li>exact tag by numeric ID: <code>id:1</code> (cannot be combined)</li><li>wallhaven username: <code>@username</code></li><li>similar wallpapers: <code>like:abc123z</code> (wallpaper ID from URL)</li><li>comma-separated list: <code>nature,@username,like:abc123z</code></li></ul>Each comma-separated entry is picked randomly and must be a valid standalone query. Tag names must be real wallhaven tags, not arbitrary words or numbers.")
                 }
 
             }
@@ -877,8 +846,6 @@ Item {
             Item {
                 implicitHeight: Kirigami.Units.gridUnit
             }
-
-        }
 
     }
 
