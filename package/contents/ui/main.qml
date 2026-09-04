@@ -52,9 +52,8 @@ WallpaperItem {
     property var pendingDownloads: ({
     }) // Track pending downloads: {url: {thumbnail, entry}}
     property var shownSavedWallpapers: main.configuration.ShownSavedWallpapers || []
-    property int syncInstanceId: 0
+    property string syncInstanceId: ""
     property string activeSyncGroupId: ""
-    property bool syncIsLeader: false
     property bool cacheCurrentImage: true
     property bool componentReady: false
 
@@ -66,24 +65,16 @@ WallpaperItem {
         return configuredSyncGroupId || "wallhaven-default-sync-group";
     }
 
-    function ownsRefreshTimer() {
-        return !synchronizeScreens || syncIsLeader;
-    }
-
     function scheduleNextRefresh() {
-        if (ownsRefreshTimer())
-            refreshTimer.restart();
-        else
-            refreshTimer.stop();
+        refreshTimer.restart();
     }
 
     function unregisterFromSyncGroup() {
         if (syncInstanceId && activeSyncGroupId)
             SyncCoordinator.unregisterInstance(activeSyncGroupId, syncInstanceId);
 
-        syncInstanceId = 0;
+        syncInstanceId = "";
         activeSyncGroupId = "";
-        syncIsLeader = false;
     }
 
     function registerWithSyncGroup() {
@@ -96,7 +87,6 @@ WallpaperItem {
         if (syncInstanceId && activeSyncGroupId === groupId) {
             return {
                 instanceId: syncInstanceId,
-                isLeader: syncIsLeader,
                 hasSelection: SyncCoordinator.hasSelection(groupId)
             };
         }
@@ -105,18 +95,10 @@ WallpaperItem {
         const registration = SyncCoordinator.registerInstance(groupId, {
             "onSelection": function(selection) {
                 applyWallpaperSelection(selection);
-            },
-            "onLeaderChanged": function(isLeader) {
-                syncIsLeader = isLeader;
-                if (isLeader)
-                    scheduleNextRefresh();
-                else
-                    refreshTimer.stop();
             }
         });
         activeSyncGroupId = groupId;
         syncInstanceId = registration.instanceId;
-        syncIsLeader = registration.isLeader;
         if (registration.hasSelection)
             applyWallpaperSelection(registration.selection);
         return registration;
@@ -129,7 +111,7 @@ WallpaperItem {
         const registration = registerWithSyncGroup();
         if (!synchronizeScreens) {
             scheduleNextRefresh();
-        } else if (registration && registration.isLeader && !registration.hasSelection) {
+        } else if (registration && !registration.hasSelection) {
             Qt.callLater(refreshImage);
         } else {
             scheduleNextRefresh();
@@ -345,12 +327,13 @@ WallpaperItem {
             if (!syncInstanceId)
                 registerWithSyncGroup();
 
-            const started = SyncCoordinator.requestSelection(activeSyncGroupId, produceWallpaperSelection, handleRefreshError);
+            const started = SyncCoordinator.requestSelection(activeSyncGroupId, syncInstanceId, produceWallpaperSelection, handleRefreshError);
             if (started) {
                 isLoading = true;
                 log("Started synchronized wallpaper selection for group " + activeSyncGroupId);
             } else {
                 log("Synchronized wallpaper selection already in progress for group " + activeSyncGroupId);
+                scheduleNextRefresh();
             }
             return;
         }
@@ -487,7 +470,7 @@ WallpaperItem {
         componentReady = true;
         loadStartupCache();
         const registration = registerWithSyncGroup();
-        if (!synchronizeScreens || (registration && registration.isLeader && !registration.hasSelection))
+        if (!synchronizeScreens || (registration && !registration.hasSelection))
             Qt.callLater(refreshImage);
         else
             scheduleNextRefresh();
@@ -553,6 +536,15 @@ WallpaperItem {
         onTriggered: {
             getImageData(retryTimer.retries - 1).then(retryTimer.resolve).catch(retryTimer.reject);
         }
+    }
+
+    Timer {
+        id: syncPollTimer
+
+        interval: 250
+        repeat: true
+        running: componentReady && synchronizeScreens && syncInstanceId !== ""
+        onTriggered: SyncCoordinator.pollInstance(activeSyncGroupId, syncInstanceId)
     }
 
     Timer {

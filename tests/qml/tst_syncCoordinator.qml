@@ -5,6 +5,10 @@ import "../../package/contents/ui/syncCoordinator.js" as SyncCoordinator
 TestCase {
     name: "SyncCoordinator"
 
+    function initTestCase() {
+        SyncCoordinator.setDatabaseNameForTests("wallhaven-sync-unit-tests");
+    }
+
     function init() {
         SyncCoordinator.resetForTests();
     }
@@ -15,24 +19,24 @@ TestCase {
         let producerCalls = 0;
         let resolveProducer;
 
-        SyncCoordinator.registerInstance("group-a", {
+        const first = SyncCoordinator.registerInstance("group-a", {
             onSelection: function(selection) {
                 firstSelections.push(selection);
             }
         });
-        SyncCoordinator.registerInstance("group-a", {
+        const second = SyncCoordinator.registerInstance("group-a", {
             onSelection: function(selection) {
                 secondSelections.push(selection);
             }
         });
 
-        const started = SyncCoordinator.requestSelection("group-a", function() {
+        const started = SyncCoordinator.requestSelection("group-a", first.instanceId, function() {
             producerCalls += 1;
             return new Promise(function(resolve) {
                 resolveProducer = resolve;
             });
         });
-        const duplicateStarted = SyncCoordinator.requestSelection("group-a", function() {
+        const duplicateStarted = SyncCoordinator.requestSelection("group-a", second.instanceId, function() {
             producerCalls += 1;
             return Promise.resolve({url: "should-not-run"});
         });
@@ -58,26 +62,38 @@ TestCase {
         compare(registration.selection.url, "file:///shared.jpg");
     }
 
-    function test_leaderMovesWhenFirstInstanceLeaves() {
-        const leadershipChanges = [];
+    function test_unregisteringRequestOwnerReleasesClaim() {
+        const selections = [];
+        let resolveFirst;
         const first = SyncCoordinator.registerInstance("group-a", {
-            onLeaderChanged: function(isLeader) {
-                leadershipChanges.push("first:" + isLeader);
+            onSelection: function(selection) {
+                selections.push(selection);
             }
         });
         const second = SyncCoordinator.registerInstance("group-a", {
-            onLeaderChanged: function(isLeader) {
-                leadershipChanges.push("second:" + isLeader);
+            onSelection: function(selection) {
+                selections.push(selection);
             }
         });
 
-        verify(first.isLeader);
-        verify(!second.isLeader);
+        verify(SyncCoordinator.requestSelection("group-a", first.instanceId, function() {
+            return new Promise(function(resolve) {
+                resolveFirst = resolve;
+            });
+        }));
         SyncCoordinator.unregisterInstance("group-a", first.instanceId);
+        verify(SyncCoordinator.requestSelection("group-a", second.instanceId, function() {
+            return Promise.resolve({url: "file:///second.jpg"});
+        }));
 
-        compare(leadershipChanges[0], "first:true");
-        compare(leadershipChanges[1], "second:false");
-        compare(leadershipChanges[2], "second:true");
+        tryVerify(function() {
+            return selections.length === 1;
+        });
+        compare(selections[0].url, "file:///second.jpg");
+
+        resolveFirst({url: "file:///stale-first.jpg"});
+        wait(0);
+        compare(selections.length, 1);
     }
 
     function test_groupsRemainIndependent() {
