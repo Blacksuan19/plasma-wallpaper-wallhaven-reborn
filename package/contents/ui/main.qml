@@ -19,6 +19,7 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.plasma5support 2.0 as Plasma5Support
 import org.kde.plasma.plasmoid
 import "savedWallpapers.js" as SavedWallpapers
+import "syncCoordinator.js" as SyncCoordinator
 import "utils.js" as Utils
 
 WallpaperItem {
@@ -42,6 +43,8 @@ WallpaperItem {
     property var currentWallpaperColors: []
     readonly property bool systemDarkMode: Kirigami.Theme.textColor.hsvValue > Kirigami.Theme.backgroundColor.hsvValue
     readonly property bool followSystemTheme: main.configuration.FollowSystemTheme
+    readonly property bool synchronizeScreens: main.configuration.SynchronizeScreens === true
+    readonly property string configuredSyncGroupId: main.configuration.SyncGroupId || ""
     readonly property string cacheDir: Utils.normalizePath(Platform.StandardPaths.writableLocation(Platform.StandardPaths.AppDataLocation)) + "/cache"
     readonly property string cacheFilePath: cacheDir + "/current-wallpaper.jpg"
     readonly property url cacheFileUrl: "file://" + cacheFilePath
@@ -49,9 +52,70 @@ WallpaperItem {
     property var pendingDownloads: ({
     }) // Track pending downloads: {url: {thumbnail, entry}}
     property var shownSavedWallpapers: main.configuration.ShownSavedWallpapers || []
+    property string syncInstanceId: ""
+    property string activeSyncGroupId: ""
+    property bool cacheCurrentImage: true
+    property bool componentReady: false
 
     function log(msg) {
         console.log(`Wallhaven Wallpaper: ${msg}`);
+    }
+
+    function effectiveSyncGroupId() {
+        return configuredSyncGroupId || "wallhaven-default-sync-group";
+    }
+
+    function scheduleNextRefresh() {
+        refreshTimer.restart();
+    }
+
+    function unregisterFromSyncGroup() {
+        if (syncInstanceId && activeSyncGroupId)
+            SyncCoordinator.unregisterInstance(activeSyncGroupId, syncInstanceId);
+
+        syncInstanceId = "";
+        activeSyncGroupId = "";
+    }
+
+    function registerWithSyncGroup() {
+        if (!synchronizeScreens) {
+            unregisterFromSyncGroup();
+            return null;
+        }
+
+        const groupId = effectiveSyncGroupId();
+        if (syncInstanceId && activeSyncGroupId === groupId) {
+            return {
+                instanceId: syncInstanceId,
+                hasSelection: SyncCoordinator.hasSelection(groupId)
+            };
+        }
+
+        unregisterFromSyncGroup();
+        const registration = SyncCoordinator.registerInstance(groupId, {
+            "onSelection": function(selection) {
+                applyWallpaperSelection(selection);
+            }
+        });
+        activeSyncGroupId = groupId;
+        syncInstanceId = registration.instanceId;
+        if (registration.hasSelection)
+            applyWallpaperSelection(registration.selection);
+        return registration;
+    }
+
+    function handleSyncConfigurationChanged() {
+        if (!componentReady)
+            return;
+
+        const registration = registerWithSyncGroup();
+        if (!synchronizeScreens) {
+            scheduleNextRefresh();
+        } else if (registration && !registration.hasSelection) {
+            Qt.callLater(refreshImage);
+        } else {
+            scheduleNextRefresh();
+        }
     }
 
     function buildDownloadCtx() {
@@ -83,23 +147,6 @@ WallpaperItem {
                 "lastLoadedUrl": lastLoadedUrl
             },
             "notify": showNotification,
-            "setCurrentUrl": function(url) {
-                main.currentUrl = url;
-            },
-            "setLastValidImagePath": function(path) {
-                main.configuration.lastValidImagePath = path;
-            },
-            "setThumbnail": function(url) {
-                main.configuration.currentWallpaperThumbnail = url;
-            },
-            "writeConfig": function() {
-                wallpaper.configuration.writeConfig();
-            },
-            "loadImage": loadImage,
-            "fetchFromWallhaven": fetchFromWallhaven,
-            "setLoading": function(value) {
-                isLoading = value;
-            },
             "currentUrl": function() {
                 return main.currentUrl ? main.currentUrl.toString() : "";
             },
@@ -109,19 +156,8 @@ WallpaperItem {
             "getShownList": function() {
                 return shownSavedWallpapers || [];
             },
-            "setShownList": function(list) {
-                shownSavedWallpapers = list || [];
-                main.configuration.ShownSavedWallpapers = shownSavedWallpapers;
-                wallpaper.configuration.writeConfig();
-            },
             "downloadWallpaper": function(url, thumb, isDark) {
                 Downloads.queueDownload(buildDownloadCtx(), url, thumb, isDark);
-            },
-            "cacheWallpaper": function(url) {
-                Downloads.queueCacheDownload(buildDownloadCtx(), url);
-            },
-            "saveEntry": function(url, thumb, localPath, isDark) {
-                Downloads.saveEntry(buildDownloadCtx(), url, thumb, localPath, isDark);
             },
             "isDark": Utils.isColorsArrayDark(currentWallpaperColors),
             "systemDarkMode": systemDarkMode,
@@ -148,22 +184,6 @@ WallpaperItem {
         main.currentUrl = cacheFileUrl;
     }
 
-    function fetchFromWallhaven(reason) {
-        log("Fetching from Wallhaven: " + reason);
-        if (main.configuration.RefreshNotification)
-            showNotification("Wallhaven Wallpaper", reason, "plugin-wallpaper");
-
-        main.configuration.ShownSavedWallpapers = [];
-        wallpaper.configuration.writeConfig();
-        getImageData(main.retryRequestCount).then((data) => {
-            pickImage(data);
-        }).catch((e) => {
-            log("getImageData Error: " + e);
-            showNotification("Wallhaven Wallpaper Error", "Failed to fetch: " + e, "dialog-error", true);
-            isLoading = false;
-        });
-    }
-
     function showNotification(title, text, iconName, isError) {
         const isErrorNotif = isError === true;
         if (isErrorNotif && !main.configuration.ErrorNotification)
@@ -184,28 +204,142 @@ WallpaperItem {
         SavedWallpapers.saveCurrentWallpaper(buildSavedCtx());
     }
 
-    function loadFromSavedWallpapers() {
-        SavedWallpapers.loadFromSavedWallpapers(buildSavedCtx());
+    function showSavedNotifications(result) {
+        (result.notifications || []).forEach((message) => {
+            showNotification("Wallhaven Wallpaper", message, "plugin-wallpaper", false);
+        });
+    }
+
+    function selectRemoteWallpaper(data) {
+        if (!data.data || data.data.length === 0) {
+            const query = data.meta && data.meta.query ? data.meta.query : main.configuration.Query;
+            throw new Error("No images found for query: " + query);
+        }
+
+        let index = 0;
+        if (main.configuration.Sorting !== "random") {
+            index = main.currentIndex;
+            if (index > 24) {
+                main.currentPage += 1;
+                main.currentIndex = 0;
+                return null;
+            }
+            main.currentIndex += 1;
+        } else {
+            index = Math.floor(Math.random() * data.data.length);
+        }
+        if (index >= data.data.length)
+            index = index % data.data.length;
+
+        const imageObj = data.data[index] || ({});
+        if (!imageObj.path)
+            throw new Error("Wallhaven returned an image without a usable URL");
+
+        return {
+            kind: "remote",
+            url: imageObj.path,
+            thumbnail: imageObj.thumbs ? imageObj.thumbs.small : "",
+            colors: imageObj.colors || [],
+            currentPage: data.meta ? data.meta.current_page : main.currentPage,
+            currentIndex: main.currentIndex,
+            currentSearchTermIndex: main.currentSearchTermIndex,
+            shownList: [],
+            producerInstanceId: syncInstanceId
+        };
+    }
+
+    function fetchRemoteSelection(reason) {
+        if (reason) {
+            log("Fetching from Wallhaven: " + reason);
+            showNotification("Wallhaven Wallpaper", reason, "plugin-wallpaper", false);
+        }
+
+        return getImageData(main.retryRequestCount).then((data) => {
+            const selection = selectRemoteWallpaper(data);
+            if (selection)
+                return selection;
+
+            return fetchRemoteSelection("");
+        });
+    }
+
+    function produceWallpaperSelection() {
+        if (!main.configuration.UseSavedWallpapers)
+            return fetchRemoteSelection("");
+
+        const result = SavedWallpapers.selectSavedWallpaper(buildSavedCtx());
+        showSavedNotifications(result);
+        if (result.type === "fetch")
+            return fetchRemoteSelection(result.reason);
+
+        return Promise.resolve({
+            kind: "saved",
+            url: result.url,
+            thumbnail: result.thumbnail,
+            colors: [],
+            currentPage: main.currentPage,
+            currentIndex: main.currentIndex,
+            currentSearchTermIndex: main.currentSearchTermIndex,
+            shownList: result.shownList || [],
+            producerInstanceId: syncInstanceId
+        });
+    }
+
+    function applyWallpaperSelection(selection) {
+        if (!selection || !selection.url)
+            return;
+
+        if (selection.currentPage !== undefined)
+            main.currentPage = selection.currentPage;
+        if (selection.currentIndex !== undefined)
+            main.currentIndex = selection.currentIndex;
+        if (selection.currentSearchTermIndex !== undefined)
+            main.currentSearchTermIndex = selection.currentSearchTermIndex;
+
+        currentWallpaperColors = selection.colors || [];
+        shownSavedWallpapers = selection.shownList || [];
+        main.configuration.ShownSavedWallpapers = shownSavedWallpapers;
+        main.configuration.currentWallpaperThumbnail = selection.thumbnail || "";
+        main.configuration.lastValidImagePath = selection.url;
+        wallpaper.configuration.writeConfig();
+
+        cacheCurrentImage = !synchronizeScreens || selection.producerInstanceId === syncInstanceId;
+        isLoading = true;
+        setWallpaperUrl(selection.url);
+        scheduleNextRefresh();
+    }
+
+    function handleRefreshError(error) {
+        log("Wallpaper refresh failed: " + error);
+        showNotification("Wallhaven Wallpaper Error", "Failed to fetch: " + error, "dialog-error", true);
+        loadFallbackImage();
+        isLoading = false;
+        scheduleNextRefresh();
     }
 
     function refreshImage() {
         if (isLoading) {
             log("Loading in progress - skipping refresh");
-            return ;
+            return;
         }
+
+        if (synchronizeScreens) {
+            if (!syncInstanceId)
+                registerWithSyncGroup();
+
+            const started = SyncCoordinator.requestSelection(activeSyncGroupId, syncInstanceId, produceWallpaperSelection, handleRefreshError);
+            if (started) {
+                isLoading = true;
+                log("Started synchronized wallpaper selection for group " + activeSyncGroupId);
+            } else {
+                log("Synchronized wallpaper selection already in progress for group " + activeSyncGroupId);
+                scheduleNextRefresh();
+            }
+            return;
+        }
+
         isLoading = true;
-        if (main.configuration.UseSavedWallpapers) {
-            loadFromSavedWallpapers();
-            return ;
-        }
-        getImageData(main.retryRequestCount).then((data) => {
-            pickImage(data);
-        }).catch((e) => {
-            log("getImageData Error: " + e);
-            showNotification("Wallhaven Wallpaper Error", "Failed to fetch: " + e, "dialog-error", true);
-            loadFallbackImage();
-            isLoading = false;
-        });
+        produceWallpaperSelection().then(applyWallpaperSelection).catch(handleRefreshError);
     }
 
     function handleRequestError(retries, errorText, resolve, reject) {
@@ -282,44 +416,6 @@ WallpaperItem {
         return result.queryParam;
     }
 
-    function pickImage(d) {
-        if (d.data.length > 0) {
-            var index = 0;
-            if (main.configuration.Sorting != "random") {
-                index = main.currentIndex;
-                if (index > 24) {
-                    main.currentPage += 1;
-                    main.currentIndex = 0;
-                    isLoading = false; // Reset loading state before restarting
-                    refreshTimer.restart();
-                    return ;
-                }
-                main.currentIndex += 1;
-            } else {
-                index = Math.floor(Math.random() * d.data.length);
-            }
-            if (index >= d.data.length)
-                index = index % d.data.length;
-
-            const imageObj = d.data[index] || {
-            };
-            currentWallpaperColors = imageObj.colors || [];
-            const remoteUrl = imageObj.path;
-            main.currentPage = d.meta.current_page;
-            main.configuration.currentWallpaperThumbnail = imageObj.thumbs.small;
-            wallpaper.configuration.writeConfig();
-            setWallpaperUrl(remoteUrl);
-        } else {
-            let msg = "No images found for query: " + d.meta.query;
-            showNotification("Wallhaven Wallpaper Error", msg, "dialog-error", true);
-            log(msg);
-            main.configuration.currentWallpaperThumbnail = "";
-            wallpaper.configuration.writeConfig();
-            loadFallbackImage();
-            isLoading = false;
-        }
-    }
-
     function setWallpaperUrl(url) {
         if (url === lastLoadedUrl) {
             log("Already loaded, skipping");
@@ -371,11 +467,26 @@ WallpaperItem {
 
     anchors.fill: parent
     Component.onCompleted: {
+        componentReady = true;
         loadStartupCache();
+        const registration = registerWithSyncGroup();
+        if (!synchronizeScreens || (registration && !registration.hasSelection))
+            Qt.callLater(refreshImage);
+        else
+            scheduleNextRefresh();
+    }
+    Component.onDestruction: {
+        componentReady = false;
+        unregisterFromSyncGroup();
     }
     onCurrentUrlChanged: loadImage()
     onFillModeChanged: loadImage()
-    onRefreshSignalChanged: refreshTimer.restart()
+    onRefreshSignalChanged: refreshImage()
+    onSynchronizeScreensChanged: Qt.callLater(handleSyncConfigurationChanged)
+    onConfiguredSyncGroupIdChanged: {
+        if (synchronizeScreens)
+            Qt.callLater(handleSyncConfigurationChanged);
+    }
     onSortingChanged: {
         if (sorting != "random") {
             currentPage = 1;
@@ -391,10 +502,10 @@ WallpaperItem {
                 main.configuration.ShownSavedWallpapers = [];
                 wallpaper.configuration.writeConfig();
             }
-            refreshTimer.restart();
+            refreshImage();
         }
     }
-    onFollowSystemThemeChanged: refreshTimer.restart()
+    onFollowSystemThemeChanged: refreshImage()
     contextualActions: [
         PlasmaCore.Action {
             text: i18n("Open Wallpaper Page")
@@ -428,11 +539,20 @@ WallpaperItem {
     }
 
     Timer {
+        id: syncPollTimer
+
+        interval: 250
+        repeat: true
+        running: componentReady && synchronizeScreens && syncInstanceId !== ""
+        onTriggered: SyncCoordinator.pollInstance(activeSyncGroupId, syncInstanceId)
+    }
+
+    Timer {
         id: refreshTimer
 
         interval: main.configuration.WallpaperDelay * 60 * 1000
-        repeat: true
-        triggeredOnStart: true
+        repeat: false
+        triggeredOnStart: false
         onTriggered: {
             log("refreshTimer triggered");
             Qt.callLater(refreshImage);
@@ -492,7 +612,8 @@ WallpaperItem {
                         if (Utils.isHttpUrl(source)) {
                             main.configuration.lastValidImagePath = source.toString();
                             wallpaper.configuration.writeConfig();
-                            Downloads.queueCacheDownload(buildDownloadCtx(), source.toString());
+                            if (cacheCurrentImage)
+                                Downloads.queueCacheDownload(buildDownloadCtx(), source.toString());
                         }
                         if (imageItem === main.pendingImage && root.currentItem !== imageItem) {
                             if (root.depth === 0)

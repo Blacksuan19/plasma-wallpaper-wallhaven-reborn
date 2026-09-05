@@ -15,31 +15,68 @@
 
 /**
  * @typedef {{
- *   config: SavedWallpaperConfig,
- *   state: SavedWallpaperState,
- *   notify: function(string, string, string, boolean=): void,
- *   setCurrentUrl: function(string): void,
- *   setLastValidImagePath: function(string): void,
- *   setThumbnail: function(string): void,
- *   writeConfig: function(): void,
- *   loadImage: function(): void,
- *   fetchFromWallhaven: function(string): void,
- *   setLoading: function(boolean): void,
- *   currentUrl: function(): string,
- *   thumbnail: function(): string,
- *   getShownList: function(): string[],
- *   setShownList: function(string[]): void,
- *   downloadWallpaper: function(string, string, (boolean|null|undefined)): void,
- *   saveEntry: function(string, string, string, (boolean|null|undefined)): void,
- *   isDark: (boolean|null),
- *   systemDarkMode: boolean,
- *   utils: Object,
- *   log: function(string): void
- * }} SavedWallpaperContext
+ *   fullUrl: string,
+ *   thumbUrl: string,
+ *   localPath: string,
+ *   isDark: (boolean|null)
+ * }} SavedWallpaperEntry
  */
 
 /**
- * @param {SavedWallpaperContext} ctx
+ * @typedef {{
+ *   isHttpUrl: function(string): boolean,
+ *   normalizePath: function(string): string,
+ *   parseSavedEntry: function(string): SavedWallpaperEntry
+ * }} SavedWallpaperUtils
+ */
+
+/**
+ * @typedef {{
+ *   notify: function(string, string, string, boolean=): void,
+ *   currentUrl: function(): string,
+ *   thumbnail: function(): string,
+ *   downloadWallpaper: function(string, string, (boolean|null|undefined)): void,
+ *   isDark: (boolean|null),
+ *   utils: SavedWallpaperUtils
+ * }} SavedWallpaperSaveContext
+ */
+
+/**
+ * @typedef {{
+ *   config: SavedWallpaperConfig,
+ *   state: SavedWallpaperState,
+ *   getShownList: function(): string[],
+ *   systemDarkMode: boolean,
+ *   utils: SavedWallpaperUtils,
+ *   log: function(string): void
+ * }} SavedWallpaperSelectionContext
+ */
+
+/**
+ * @typedef {{
+ *   type: "fetch",
+ *   reason: string,
+ *   shownList: string[],
+ *   notifications: string[]
+ * }} SavedWallpaperFetchResult
+ */
+
+/**
+ * @typedef {{
+ *   type: "selection",
+ *   url: string,
+ *   thumbnail: string,
+ *   shownList: string[],
+ *   notifications: string[]
+ * }} SavedWallpaperSelectionResult
+ */
+
+/**
+ * @typedef {SavedWallpaperFetchResult|SavedWallpaperSelectionResult} SavedWallpaperResult
+ */
+
+/**
+ * @param {SavedWallpaperSaveContext} ctx
  * @returns {void}
  */
 function saveCurrentWallpaper(ctx) {
@@ -58,17 +95,26 @@ function saveCurrentWallpaper(ctx) {
 }
 
 /**
- * @param {SavedWallpaperContext} ctx
- * @returns {void}
+ * Select the next saved wallpaper without applying it to a specific screen.
+ * This lets one Plasma wallpaper instance make the choice and share it with
+ * the other synchronized instances.
+ *
+ * @param {SavedWallpaperSelectionContext} ctx
+ * @returns {SavedWallpaperResult}
  */
-function loadFromSavedWallpapers(ctx) {
+function selectSavedWallpaper(ctx) {
     const config = ctx.config;
     const fullSavedList = config.SavedWallpapers || [];
     if (fullSavedList.length === 0) {
-        ctx.notify("Wallhaven Wallpaper", "No saved wallpapers found. Fetching from Wallhaven...", "plugin-wallpaper", false);
-        ctx.fetchFromWallhaven("No saved wallpapers found. Fetching from Wallhaven...");
-        return;
+        return {
+            type: "fetch",
+            reason: "No saved wallpapers found. Fetching from Wallhaven...",
+            shownList: [],
+            notifications: []
+        };
     }
+
+    const notifications = [];
 
     // Filter to dark wallpapers when FollowSystemTheme is enabled and system is in dark mode.
     // Entries with unknown darkness (isDark === null, e.g. older saved entries) are always included.
@@ -88,13 +134,15 @@ function loadFromSavedWallpapers(ctx) {
     let shownList = ctx.getShownList();
     if (shownList.length >= savedList.length) {
         if (config.CycleSavedWallpapers) {
-            ctx.notify("Wallhaven Wallpaper", "Restarting saved wallpapers cycle", "plugin-wallpaper", false);
-            ctx.setShownList([]);
+            notifications.push("Restarting saved wallpapers cycle");
             shownList = [];
         } else {
-            ctx.setShownList([]);
-            ctx.fetchFromWallhaven("All " + savedList.length + " saved wallpapers shown. Fetching new from Wallhaven...");
-            return;
+            return {
+                type: "fetch",
+                reason: "All " + savedList.length + " saved wallpapers shown. Fetching new from Wallhaven...",
+                shownList: [],
+                notifications: notifications
+            };
         }
     }
 
@@ -117,9 +165,12 @@ function loadFromSavedWallpapers(ctx) {
     });
 
     if (!config.CycleSavedWallpapers && unshownWallpapers.length === 0) {
-        ctx.setShownList([]);
-        ctx.fetchFromWallhaven("All " + savedList.length + " saved wallpapers shown. Fetching new from Wallhaven...");
-        return;
+        return {
+            type: "fetch",
+            reason: "All " + savedList.length + " saved wallpapers shown. Fetching new from Wallhaven...",
+            shownList: [],
+            notifications: notifications
+        };
     }
 
     const pickNextSequential = () => {
@@ -147,17 +198,20 @@ function loadFromSavedWallpapers(ctx) {
         });
         if (availableWallpapers.length === 0) {
             if (config.CycleSavedWallpapers) {
-                ctx.notify("Wallhaven Wallpaper", "Only one saved wallpaper available", "plugin-wallpaper", false);
+                notifications.push("Only one saved wallpaper available");
                 availableWallpapers = savedList.filter((entry) => {
                     return !isCurrentEntry(entry);
                 });
                 if (availableWallpapers.length === 0)
                     availableWallpapers = savedList.slice();
-                ctx.setShownList([]);
                 shownList = [];
             } else {
-                ctx.fetchFromWallhaven("Only one saved wallpaper. Fetching new from Wallhaven...");
-                return;
+                return {
+                    type: "fetch",
+                    reason: "Only one saved wallpaper. Fetching new from Wallhaven...",
+                    shownList: [],
+                    notifications: notifications
+                };
             }
         }
         const randomIndex = Math.floor(Math.random() * availableWallpapers.length);
@@ -166,18 +220,20 @@ function loadFromSavedWallpapers(ctx) {
         selectedEntry = pickNextSequential();
         if (!selectedEntry) {
             if (config.CycleSavedWallpapers) {
-                ctx.setShownList([]);
                 shownList = [];
                 unshownWallpapers = savedList.slice();
                 selectedEntry = pickNextSequential();
                 if (!selectedEntry) {
-                    ctx.notify("Wallhaven Wallpaper", "Only one saved wallpaper available", "plugin-wallpaper", false);
+                    notifications.push("Only one saved wallpaper available");
                     selectedEntry = savedList[0];
                 }
             } else {
-                ctx.setShownList([]);
-                ctx.fetchFromWallhaven("All " + savedList.length + " saved wallpapers shown. Fetching new from Wallhaven...");
-                return;
+                return {
+                    type: "fetch",
+                    reason: "All " + savedList.length + " saved wallpapers shown. Fetching new from Wallhaven...",
+                    shownList: [],
+                    notifications: notifications
+                };
             }
         }
     }
@@ -188,15 +244,15 @@ function loadFromSavedWallpapers(ctx) {
 
     let newShownList = shownList.slice();
     newShownList.push(selectedEntry);
-    ctx.setShownList(newShownList);
     const source = parsed.localPath ? "local" : "online";
     const selectedIndex = savedList.indexOf(selectedEntry) + 1;
-    ctx.notify("Wallhaven Wallpaper", "Loading saved wallpaper " + selectedIndex + " of " + savedList.length + " (" + source + ")", "plugin-wallpaper", false);
+    notifications.push("Loading saved wallpaper " + selectedIndex + " of " + savedList.length + " (" + source + ")");
 
-    ctx.setCurrentUrl(finalUrl);
-    ctx.setLastValidImagePath(finalUrl);
-    ctx.setThumbnail(thumbnailSource);
-    ctx.writeConfig();
-    ctx.loadImage();
-    ctx.setLoading(false);
+    return {
+        type: "selection",
+        url: finalUrl,
+        thumbnail: thumbnailSource,
+        shownList: newShownList,
+        notifications: notifications
+    };
 }
