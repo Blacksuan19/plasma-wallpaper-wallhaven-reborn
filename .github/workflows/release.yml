@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - package/metadata.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Read version and check tag
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(jq -er '.KPlugin.Version | select(type == "string")' package/metadata.json)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version in package/metadata.json: $version" >&2
+            exit 1
+          fi
+          tag="v$version"
+          existing_tag=$(git ls-remote --tags origin "refs/tags/$tag")
+          if [[ -n "$existing_tag" ]]; then
+            echo "Tag $tag already exists; refusing to overwrite a release." >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "asset=plasma-wallpaper-wallhaven-reborn-$tag.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Build installable ZIP
+        shell: bash
+        env:
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: |
+          set -euo pipefail
+          zip -r "$ASSET" package/* -x 'package/*.zip'
+          unzip -t "$ASSET"
+          unzip -p "$ASSET" package/metadata.json | jq -e '.KPlugin.Version' >/dev/null
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: gh release create "$TAG" "$ASSET" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
