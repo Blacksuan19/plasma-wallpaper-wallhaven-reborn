@@ -67,6 +67,25 @@ function parseSavedEntry(entry) {
 }
 
 /**
+ * Returns the integers from 0 up to (but not including) count in a random order.
+ * @param {number} count
+ * @returns {number[]}
+ */
+function shuffledRange(count) {
+    const values = [];
+    for (let i = 0; i < count; i++)
+        values.push(i);
+
+    for (let i = values.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = values[i];
+        values[i] = values[j];
+        values[j] = tmp;
+    }
+    return values;
+}
+
+/**
  * @param {Object.<string, any>} config
  * @param {string} paramName
  * @param {string[]} configKeys

@@ -29,6 +29,9 @@ Port of wallhaven wallpaper plugin by
   - one tag is chosen randomly from the list of tags for each wallpaper.
 - add ability to pass a custom aspect ratio or multiple aspect ratios.
 - add ability to pass a custom resolution.
+- fetch wallpapers from a preset (toplist, views, favorites, etc.) in randomized
+  order instead of always starting from the first page, so restarting
+  plasmashell does not replay the same wallpapers.
 - add tooltip button to show how to search for wallpapers.
 - automatically refresh the wallpaper after changing settings.
 - show notification when fetching new wallpaper or when an error occurs.

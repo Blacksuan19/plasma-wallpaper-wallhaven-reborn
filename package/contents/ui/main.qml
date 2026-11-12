@@ -29,6 +29,11 @@ WallpaperItem {
     property int currentPage: 1
     property int currentIndex
     property int currentSearchTermIndex: -1
+    property int lastPage: 0
+    property var pageOrder: []
+    property int pageOrderPos: 0
+    property var pageIndexOrder: []
+    property int pageIndexPos: 0
     readonly property int fillMode: main.configuration.FillMode
     readonly property bool refreshSignal: main.configuration.RefetchSignal
     readonly property string sorting: main.configuration.Sorting
@@ -210,6 +215,69 @@ WallpaperItem {
         });
     }
 
+    function resetRemotePaging() {
+        main.lastPage = 0;
+        main.pageOrder = [];
+        main.pageOrderPos = 0;
+        main.pageIndexOrder = [];
+        main.pageIndexPos = 0;
+        main.currentPage = 1;
+        main.currentIndex = 0;
+    }
+
+    function ensureRemotePageOrder(totalPages) {
+        const pages = Math.max(1, totalPages || 1);
+        if (main.lastPage === pages && main.pageOrder.length === pages)
+            return;
+
+        main.lastPage = pages;
+        main.pageOrder = Utils.shuffledRange(pages);
+        main.pageOrderPos = 0;
+    }
+
+    function nextRemotePageNumber() {
+        if (main.lastPage <= 1)
+            return 1;
+
+        if (main.pageOrderPos >= main.pageOrder.length) {
+            main.pageOrder = Utils.shuffledRange(main.lastPage);
+            main.pageOrderPos = 0;
+        }
+
+        const page = main.pageOrder[main.pageOrderPos] + 1;
+        main.pageOrderPos += 1;
+        return page;
+    }
+
+    function selectNextRemotePage() {
+        main.currentPage = main.lastPage > 0 ? main.nextRemotePageNumber() : 1;
+        main.pageIndexOrder = [];
+        main.pageIndexPos = 0;
+    }
+
+    function prepareRemotePage() {
+        if (main.pageIndexPos < main.pageIndexOrder.length)
+            return;
+
+        main.selectNextRemotePage();
+    }
+
+    function nextRemotePageIndex(length) {
+        if (main.pageIndexOrder.length !== length) {
+            main.pageIndexOrder = Utils.shuffledRange(length);
+            main.pageIndexPos = 0;
+        }
+        if (main.pageIndexPos >= main.pageIndexOrder.length) {
+            main.pageIndexOrder = Utils.shuffledRange(length);
+            main.pageIndexPos = 0;
+        }
+
+        const index = main.pageIndexOrder[main.pageIndexPos];
+        main.pageIndexPos += 1;
+        main.currentIndex = index;
+        return index;
+    }
+
     function selectRemoteWallpaper(data) {
         if (!data.data || data.data.length === 0) {
             const query = data.meta && data.meta.query ? data.meta.query : main.configuration.Query;
@@ -217,19 +285,10 @@ WallpaperItem {
         }
 
         let index = 0;
-        if (main.configuration.Sorting !== "random") {
-            index = main.currentIndex;
-            if (index > 24) {
-                main.currentPage += 1;
-                main.currentIndex = 0;
-                return null;
-            }
-            main.currentIndex += 1;
-        } else {
+        if (main.configuration.Sorting === "random")
             index = Math.floor(Math.random() * data.data.length);
-        }
-        if (index >= data.data.length)
-            index = index % data.data.length;
+        else
+            index = main.nextRemotePageIndex(data.data.length);
 
         const imageObj = data.data[index] || ({});
         if (!imageObj.path)
@@ -248,13 +307,48 @@ WallpaperItem {
         };
     }
 
-    function fetchRemoteSelection(reason) {
+    function fetchRemoteSelection(reason, pageRetry) {
+        const retryCount = pageRetry || 0;
+
         if (reason) {
             log("Fetching from Wallhaven: " + reason);
             showNotification("Wallhaven Wallpaper", reason, "plugin-wallpaper", false);
         }
 
+        if (main.configuration.Sorting !== "random")
+            main.prepareRemotePage();
+
         return getImageData(main.retryRequestCount).then((data) => {
+            if (main.configuration.Sorting !== "random") {
+                const meta = data.meta;
+                const hasMeta = !!(meta && meta.last_page);
+                const discovering = main.lastPage === 0;
+
+                if (hasMeta) {
+                    const totalPages = Math.max(1, meta.last_page);
+                    const reportedPage = meta.current_page || main.currentPage;
+
+                    if (discovering || main.lastPage !== totalPages)
+                        main.ensureRemotePageOrder(totalPages);
+
+                    if (discovering && totalPages > 1) {
+                        main.pageIndexOrder = [];
+                        main.pageIndexPos = 0;
+                        return fetchRemoteSelection("");
+                    }
+                    if (reportedPage > totalPages && retryCount < 2) {
+                        main.pageIndexOrder = [];
+                        main.pageIndexPos = 0;
+                        return fetchRemoteSelection("", retryCount + 1);
+                    }
+                } else if (!discovering) {
+                    // The API omits meta for out-of-range pages, so rediscover the
+                    // page count from the first page before choosing another one.
+                    main.resetRemotePaging();
+                    return fetchRemoteSelection("");
+                }
+            }
+
             const selection = selectRemoteWallpaper(data);
             if (selection)
                 return selection;
@@ -487,12 +581,7 @@ WallpaperItem {
         if (synchronizeScreens)
             Qt.callLater(handleSyncConfigurationChanged);
     }
-    onSortingChanged: {
-        if (sorting != "random") {
-            currentPage = 1;
-            currentIndex = 0;
-        }
-    }
+    onSortingChanged: resetRemotePaging()
     onSystemDarkModeChanged: {
         if (followSystemTheme) {
             log("System theme changed");
