@@ -53,6 +53,7 @@ ColumnLayout {
     property int cfg_ResolutionY: 1080
     property string cfg_Sorting
     property string cfg_TopRange
+    property bool cfg_RandomizeResults
     property string cfg_SearchColor
     property bool cfg_CategoryGeneral
     property bool cfg_CategoryAnime
@@ -706,6 +707,18 @@ ColumnLayout {
                 }]
                 Component.onCompleted: currentIndex = indexOfValue(cfg_TopRange)
                 onActivated: cfg_TopRange = currentValue
+            }
+
+            CheckBox {
+                id: randomizeResultsCheckbox
+
+                Kirigami.FormData.label: i18n("Results order:")
+                text: i18n("Randomize")
+                visible: cfg_Sorting !== "random"
+                checked: cfg_RandomizeResults
+                onToggled: cfg_RandomizeResults = checked
+                ToolTip.text: i18n("Fetch wallpapers from the selected sorting in random order instead of always starting from the first page.")
+                ToolTip.visible: hovered
             }
 
             Item {
