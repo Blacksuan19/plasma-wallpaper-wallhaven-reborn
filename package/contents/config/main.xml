@@ -56,6 +56,10 @@
       <label>Range limit when sorting by top list</label>
       <default>1M</default>
     </entry>
+    <entry name="RandomizeResults" type="bool">
+      <label>Fetch wallpapers in random order instead of following the sorted result order</label>
+      <default>true</default>
+    </entry>
     <entry name="Search Color" type="string">
       <label>Color to filter the search results</label>
       <default></default>
